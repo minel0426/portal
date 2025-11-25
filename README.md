@@ -6,7 +6,7 @@
 
 请在您的浏览器中打开此地址以启动应用：
 
-[**http://wen7.space/**](https://wen7.space/)
+[**https://wen7.space/**](https://wen7.space/)
 
 ---
 
