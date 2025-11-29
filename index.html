@@ -1,660 +1,1065 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Portal</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        :root {
-            --primary: #007AFF;
-            --glass-bg: rgba(255, 255, 255, 0.65); 
-            --glass-border: rgba(255, 255, 255, 0.7);
-            --glass-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.1); 
-            --text-main: #1d1d1f;
-            --text-sub: #86868b;
-        }
+      :root {
+        --primary: #007aff;
+        --glass-bg: rgba(255, 255, 255, 0.65);
+        --glass-border: rgba(255, 255, 255, 0.7);
+        --glass-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.1);
+        --text-main: #1d1d1f;
+        --text-sub: #86868b;
+      }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
-            margin: 0;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: var(--text-main);
-            background: linear-gradient(-45deg, #e0c3fc, #9fa8da, #8ec5fc, #b2ebf2);
-            background-size: 400% 400%;
-            animation: gradientBG 90s ease infinite;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        
-        @keyframes gradientBG {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+          "Helvetica Neue", sans-serif;
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: var(--text-main);
+        background: linear-gradient(-45deg, #e0c3fc, #9fa8da, #8ec5fc, #b2ebf2);
+        background-size: 400% 400%;
+        animation: gradientBG 90s ease infinite;
+        padding: 20px;
+        box-sizing: border-box;
+      }
 
+      @keyframes gradientBG {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+
+      .glass-card {
+        width: 100%;
+        max-width: 440px;
+        background: var(--glass-bg);
+        backdrop-filter: blur(40px) saturate(160%);
+        -webkit-backdrop-filter: blur(40px) saturate(160%);
+        border-radius: 32px;
+        border: 1px solid var(--glass-border);
+        box-shadow: var(--glass-shadow);
+        padding: 40px 32px;
+        box-sizing: border-box;
+        position: relative;
+        overflow: hidden;
+        animation: floatUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+        transition: height 0.3s ease, padding 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        max-height: 90vh;
+      }
+
+      .glass-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.6),
+          transparent
+        );
+      }
+
+      h2 {
+        margin: 0 0 8px 0;
+        text-align: center;
+        font-weight: 700;
+        font-size: 28px;
+        letter-spacing: -0.5px;
+        color: #1d1d1f;
+        flex-shrink: 0;
+      }
+
+      .subtitle {
+        text-align: center;
+        font-size: 15px;
+        color: var(--text-sub);
+        margin-bottom: 24px;
+        font-weight: 500;
+        flex-shrink: 0;
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 18px;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 30px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-sub);
+        margin-bottom: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+        transition: all 0.3s;
+      }
+      .status-container {
+        text-align: center;
+        display: none;
+        flex-shrink: 0;
+      }
+
+      .status-active {
+        color: #2e7d32;
+        background: rgba(220, 252, 231, 0.7);
+        border-color: rgba(220, 252, 231, 0.9);
+      }
+      .status-error {
+        color: #c62828;
+        background: rgba(255, 235, 238, 0.7);
+      }
+      .status-wait {
+        color: #f57f17;
+        background: rgba(255, 249, 196, 0.7);
+      }
+
+      .panel {
+        display: none;
+        animation: fadeIn 0.4s ease;
+        flex-grow: 1;
+        overflow-y: auto;
+      }
+      .panel::-webkit-scrollbar { display: none; }
+
+      .code-container {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 24px;
+        margin-bottom: 24px;
+        padding: 0 10px;
+      }
+      .code-input {
+        flex: 1;
+        max-width: 60px;
+        min-width: 40px;
+        height: 64px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        background: rgba(255, 255, 255, 0.4);
+        border-radius: 12px;
+        text-align: center;
+        font-size: 32px;
+        font-weight: 600;
+        color: var(--text-main);
+        outline: none;
+        transition: all 0.2s;
+        font-family: -apple-system, monospace;
+        flex-shrink: 1;
+      }
+      .code-input:focus {
+        background: white;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.15);
+        transform: translateY(-2px);
+      }
+      .code-hint {
+        text-align: center;
+        font-size: 13px;
+        color: var(--text-sub);
+        margin-top: 16px;
+      }
+
+      .qr-wrapper {
+        background: white;
+        padding: 16px;
+        border-radius: 20px;
+        display: inline-block;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+        margin-bottom: 20px;
+      }
+      .qr-wrapper img { display: block; }
+
+      .drop-zone {
+        border: 2px dashed rgba(0, 122, 255, 0.25);
+        background: rgba(0, 122, 255, 0.02);
+        border-radius: 24px;
+        padding: 32px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-top: 12px;
+        margin-bottom: 12px;
+      }
+      .drop-zone:hover {
+        background: rgba(0, 122, 255, 0.06);
+        border-color: var(--primary);
+        transform: translateY(-2px);
+      }
+      .drop-icon {
+        font-size: 40px;
+        display: block;
+        margin-bottom: 8px;
+        filter: drop-shadow(0 4px 8px rgba(0, 122, 255, 0.15));
+      }
+      .drop-text {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--primary);
+      }
+
+      #file-list {
+        max-height: 300px;
+        overflow-y: auto;
+        padding-right: 4px;
+        margin-top: 16px;
+      }
+      #file-list::-webkit-scrollbar { width: 4px; }
+      #file-list::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+      }
+
+      .file-item {
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 18px;
+        padding: 14px 18px;
+        margin-bottom: 12px;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        animation: slideIn 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+      }
+      
+      .file-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+      }
+
+      .file-info {
+        overflow: hidden;
+        margin-right: 10px;
+        flex: 1;
+      }
+      .file-name {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-main);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .file-status {
+        font-size: 12px;
+        color: var(--text-sub);
+        margin-top: 4px;
+      }
+
+      .progress-wrapper {
+        width: 100%;
+        margin-top: 10px;
+        display: none;
+      }
+      .progress-bg {
+        width: 100%;
+        height: 6px;
+        background: rgba(0,0,0,0.06);
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .progress-fill {
+        height: 100%;
+        background: var(--primary);
+        width: 0%;
+        transition: width 0.2s linear;
+        border-radius: 3px;
+      }
+      .progress-text {
+        font-size: 11px;
+        color: var(--text-sub);
+        margin-top: 4px;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .text-card { background: #fff; }
+      .text-content {
+        font-size: 14px;
+        color: #333;
+        line-height: 1.4;
+        white-space: pre-wrap;
+        word-break: break-all;
+        font-family: "SF Mono", Menlo, monospace;
+      }
+      .text-content a {
+        color: var(--primary);
+        text-decoration: none;
+        border-bottom: 1px solid rgba(0, 122, 255, 0.3);
+      }
+
+      .btn-action {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 6px 14px;
+        border-radius: 16px;
+        font-size: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
+        transition: 0.2s;
+        cursor: pointer;
+        white-space: nowrap;
+        margin-left: 8px;
+      }
+      .btn-action:active {
+        transform: scale(0.96);
+        box-shadow: 0 2px 6px rgba(0, 122, 255, 0.2);
+      }
+      .btn-secondary {
+        background: rgba(0, 0, 0, 0.05);
+        color: #333;
+        box-shadow: none;
+      }
+      .btn-secondary:hover { background: rgba(0, 0, 0, 0.1); }
+
+      .btn-group {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .reset-link {
+        display: block;
+        text-align: center;
+        margin-top: 16px;
+        color: var(--text-sub);
+        font-size: 13px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: 0.2s;
+        flex-shrink: 0;
+      }
+      .reset-link:hover { color: var(--primary); }
+
+      .text-toggle {
+        text-align: center;
+        font-size: 13px;
+        color: var(--primary);
+        cursor: pointer;
+        margin-bottom: 10px;
+        font-weight: 500;
+        display: block;
+        opacity: 0.8;
+      }
+      .text-toggle:hover {
+        opacity: 1;
+      }
+
+      .text-input-group {
+        display: none;
+        margin-bottom: 16px;
+        animation: fadeIn 0.3s;
+      }
+      .text-area {
+        width: 100%;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 16px;
+        padding: 12px;
+        font-family: inherit;
+        resize: none;
+        box-sizing: border-box;
+        background: rgba(255, 255, 255, 0.8);
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+      .text-area:focus {
+        outline: none;
+        border-color: var(--primary);
+        background: #fff;
+      }
+
+      @keyframes floatUp {
+        from { opacity: 0; transform: translateY(30px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes slideIn {
+        from { opacity: 0; transform: translateX(-15px); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+
+      @media (max-width: 480px) {
         .glass-card {
-            width: 100%;
-            max-width: 440px;
-            background: var(--glass-bg);
-            backdrop-filter: blur(40px) saturate(160%); 
-            -webkit-backdrop-filter: blur(40px) saturate(160%);
-            border-radius: 32px; 
-            border: 1px solid var(--glass-border);
-            box-shadow: var(--glass-shadow);
-            padding: 40px 32px; 
-            box-sizing: border-box;
-            position: relative;
-            overflow: hidden;
-            animation: floatUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
-            transition: height 0.3s ease, padding 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            max-height: 90vh;
+          padding: 30px 20px;
+          border-radius: 24px;
         }
-
-        .glass-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
-        }
-
-        h2 {
-            margin: 0 0 8px 0;
-            text-align: center;
-            font-weight: 700;
-            font-size: 28px;
-            letter-spacing: -0.5px;
-            color: #1d1d1f;
-            flex-shrink: 0;
-        }
-        
-        .subtitle {
-            text-align: center;
-            font-size: 15px;
-            color: var(--text-sub);
-            margin-bottom: 24px;
-            font-weight: 500;
-            flex-shrink: 0;
-        }
-
-        .status-pill {
-            display: inline-flex;
-            align-items: center;
-            padding: 8px 18px;
-            background: rgba(255, 255, 255, 0.5);
-            border-radius: 30px;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-sub);
-            margin-bottom: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-            transition: all 0.3s;
-        }
-        .status-container { text-align: center; display: none; flex-shrink: 0; }
-        
-        .status-active { color: #2E7D32; background: rgba(220, 252, 231, 0.7); border-color: rgba(220, 252, 231, 0.9); }
-        .status-error { color: #C62828; background: rgba(255, 235, 238, 0.7); }
-        .status-wait { color: #F57F17; background: rgba(255, 249, 196, 0.7); }
-
-        .panel { display: none; animation: fadeIn 0.4s ease; flex-grow: 1; overflow-y: auto; }
-        .panel::-webkit-scrollbar { display: none; } 
-
-        .code-container {
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-            margin-top: 24px;
-            margin-bottom: 24px;
-        }
+        .code-container { gap: 8px; }
         .code-input {
-            width: 56px;
-            height: 64px;
-            border: 1px solid rgba(0,0,0,0.1);
-            background: rgba(255,255,255,0.4);
-            border-radius: 12px;
-            text-align: center;
-            font-size: 32px;
-            font-weight: 600;
-            color: var(--text-main);
-            outline: none;
-            transition: all 0.2s;
-            font-family: -apple-system, monospace;
-            flex-shrink: 0; 
+          height: 56px;
+          font-size: 24px;
+          border-radius: 10px;
         }
-        .code-input:focus {
-            background: white;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(0,122,255,0.15);
-            transform: translateY(-2px);
-        }
-        .code-hint {
-            text-align: center;
-            font-size: 13px;
-            color: var(--text-sub);
-            margin-top: 16px;
-        }
-
-        .qr-wrapper {
-            background: white;
-            padding: 16px;
-            border-radius: 20px;
-            display: inline-block;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.04);
-            margin-bottom: 20px;
-        }
-        .qr-wrapper img { display: block; }
-
-        .drop-zone {
-            border: 2px dashed rgba(0, 122, 255, 0.25);
-            background: rgba(0, 122, 255, 0.02);
-            border-radius: 24px;
-            padding: 32px 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-top: 12px;
-            margin-bottom: 12px;
-        }
-        .drop-zone:hover { background: rgba(0, 122, 255, 0.06); border-color: var(--primary); transform: translateY(-2px); }
-        .drop-icon { font-size: 40px; display: block; margin-bottom: 8px; filter: drop-shadow(0 4px 8px rgba(0,122,255,0.15)); }
-        .drop-text { font-size: 15px; font-weight: 600; color: var(--primary); }
-
-        #file-list { 
-            max-height: 300px; 
-            overflow-y: auto; 
-            padding-right: 4px; 
-            margin-top: 16px;
-        }
-        #file-list::-webkit-scrollbar { width: 4px; }
-        #file-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
-
-        .file-item {
-            background: rgba(255, 255, 255, 0.6);
-            border-radius: 18px;
-            padding: 14px 18px;
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center; 
-            border: 1px solid rgba(255,255,255,0.4);
-            animation: slideIn 0.3s ease;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-        }
-        .file-info { overflow: hidden; margin-right: 10px; flex: 1; }
-        .file-name { font-size: 15px; font-weight: 600; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .file-status { font-size: 12px; color: var(--text-sub); margin-top: 4px; }
-        
-        .text-card {
-            background: #fff;
-        }
-        .text-content {
-            font-size: 14px;
-            color: #333;
-            line-height: 1.4;
-            white-space: pre-wrap;
-            word-break: break-all;
-            font-family: 'SF Mono', Menlo, monospace;
-        }
-        .text-content a { color: var(--primary); text-decoration: none; border-bottom: 1px solid rgba(0,122,255,0.3); }
-
-        .btn-action {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 6px 14px;
-            border-radius: 16px;
-            font-size: 12px;
-            font-weight: 600;
-            text-decoration: none;
-            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
-            transition: 0.2s;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-        .btn-action:active { transform: scale(0.96); box-shadow: 0 2px 6px rgba(0, 122, 255, 0.2); }
-        .btn-secondary { background: rgba(0,0,0,0.05); color: #333; box-shadow: none; }
-        .btn-secondary:hover { background: rgba(0,0,0,0.1); }
-
-        .btn-group { display: flex; gap: 8px; align-items: center; }
-
-        .reset-link {
-            display: block;
-            text-align: center;
-            margin-top: 16px;
-            color: var(--text-sub);
-            font-size: 13px;
-            text-decoration: none;
-            cursor: pointer;
-            transition: 0.2s;
-            flex-shrink: 0;
-        }
-        .reset-link:hover { color: var(--primary); }
-
-        .text-toggle {
-            text-align: center;
-            font-size: 13px;
-            color: var(--primary);
-            cursor: pointer;
-            margin-bottom: 10px;
-            font-weight: 500;
-            display: block;
-            opacity: 0.8;
-        }
-        .text-toggle:hover { opacity: 1; text-decoration: underline; }
-        
-        .text-input-group {
-            display: none;
-            margin-bottom: 16px;
-            animation: fadeIn 0.3s;
-        }
-        .text-area {
-            width: 100%;
-            border: 1px solid rgba(0,0,0,0.1);
-            border-radius: 16px;
-            padding: 12px;
-            font-family: inherit;
-            resize: none;
-            box-sizing: border-box;
-            background: rgba(255,255,255,0.8);
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-        .text-area:focus { outline: none; border-color: var(--primary); background: #fff; }
-
-        @keyframes floatUp { from { opacity: 0; transform: translateY(30px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideIn { from { opacity: 0; transform: translateX(-15px); } to { opacity: 1; transform: translateX(0); } }
-
-        @media (max-width: 480px) {
-            .glass-card {
-                padding: 30px 20px; 
-                border-radius: 24px;
-            }
-            .code-container {
-                gap: 8px; 
-            }
-            .code-input {
-                width: 46px;
-                height: 56px; 
-                font-size: 24px;
-                border-radius: 10px;
-            }
-            h2 { font-size: 24px; }
-        }
+        h2 { font-size: 24px; }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
+    <div class="glass-card">
+      <h2 id="main-title">Portal</h2>
+      <div class="subtitle" id="main-subtitle">输入配对码或扫码连接</div>
 
-<div class="glass-card">
-    <h2 id="main-title">Portal</h2>
-    <div class="subtitle" id="main-subtitle">输入配对码或扫码连接</div>
-    
-    <div class="status-container" id="status-box">
+      <div class="status-container" id="status-box">
         <div id="status" class="status-pill">正在初始化...</div>
-    </div>
+      </div>
 
-    <div id="entry-panel" class="panel" style="display: block;">
+      <div id="entry-panel" class="panel" style="display: block">
         <div class="code-container">
-            <input type="tel" maxlength="1" class="code-input" id="digit-1" autofocus>
-            <input type="tel" maxlength="1" class="code-input" id="digit-2">
-            <input type="tel" maxlength="1" class="code-input" id="digit-3">
-            <input type="tel" maxlength="1" class="code-input" id="digit-4">
+          <input type="tel" maxlength="1" class="code-input" id="digit-1" autofocus />
+          <input type="tel" maxlength="1" class="code-input" id="digit-2" />
+          <input type="tel" maxlength="1" class="code-input" id="digit-3" />
+          <input type="tel" maxlength="1" class="code-input" id="digit-4" />
         </div>
         <div class="code-hint">在两台设备上输入相同的 4 位数字</div>
-    </div>
+      </div>
 
-    <div id="host-panel" class="panel">
-        <div style="text-align: center;">
-            <div style="font-size: 42px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; letter-spacing: 4px;" id="display-code">----</div>
-            <div style="font-size: 13px; color: var(--text-sub); margin-bottom: 24px;">本机配对码</div>
-            
-            <div class="qr-wrapper">
-                <div id="qrcode"></div>
-            </div>
-            <div style="font-size: 13px; color: var(--text-sub); font-weight: 500;">手机也可扫描此码连接</div>
+      <div id="host-panel" class="panel">
+        <div style="text-align: center">
+          <div
+            style="
+              font-size: 42px;
+              font-weight: 700;
+              color: var(--text-main);
+              margin-bottom: 8px;
+              letter-spacing: 4px;
+            "
+            id="display-code">
+            ----
+          </div>
+          <div style="font-size: 13px; color: var(--text-sub); margin-bottom: 24px;">
+            本机配对码
+          </div>
+
+          <div class="qr-wrapper">
+            <div id="qrcode"></div>
+          </div>
+          <div style="font-size: 13px; color: var(--text-sub); font-weight: 500">
+            移动设备扫码连接
+          </div>
         </div>
-    </div>
+      </div>
 
-    <div id="guest-panel" class="panel" style="text-align: center; padding: 20px 0;">
-        <div style="font-size: 56px; margin-bottom: 20px; animation: pulse 2.5s infinite; filter: drop-shadow(0 8px 16px rgba(0,122,255,0.2));">📡</div>
-        <div style="font-size: 17px; font-weight: 600;">正在建立安全通道...</div>
-    </div>
+      <div
+        id="guest-panel"
+        class="panel"
+        style="text-align: center; padding: 20px 0">
+        <div
+          style="
+            font-size: 56px;
+            margin-bottom: 20px;
+            animation: pulse 2.5s infinite;
+            filter: drop-shadow(0 8px 16px rgba(0, 122, 255, 0.2));
+          ">
+          📡
+        </div>
+        <div style="font-size: 17px; font-weight: 600">正在连接设备...</div>
+      </div>
 
-    <div id="transfer-panel" class="panel">
+      <div id="transfer-panel" class="panel">
         <div class="drop-zone" id="drop-zone">
-            <span class="drop-icon">☁️</span>
-            <span class="drop-text">轻点或拖拽文件发送</span>
-            <div style="font-size: 12px; color: var(--text-sub); margin-top: 6px; font-weight: 400;">支持 Ctrl+V 粘贴文字发送</div>
+          <span class="drop-icon">⚡</span>
+          <span class="drop-text">轻点或拖拽文件</span>
+          <div
+            style="
+              font-size: 12px;
+              color: var(--text-sub);
+              margin-top: 6px;
+              font-weight: 400;
+            ">
+            Ctrl+V 粘贴文字发送
+          </div>
         </div>
-        
+
         <span class="text-toggle" onclick="toggleTextMode()">发送消息</span>
-        
+
         <div class="text-input-group" id="text-input-group">
-            <textarea class="text-area" id="msg-input" rows="3" placeholder="在此输入消息..."></textarea>
-            <div style="text-align: right;">
-                <button class="btn-action btn-secondary" onclick="toggleTextMode()" style="margin-right: 8px;">取消</button>
-                <button class="btn-action" onclick="sendMsg()">发送</button>
-            </div>
+          <textarea
+            class="text-area"
+            id="msg-input"
+            rows="3"
+            placeholder="在此输入消息..."></textarea>
+          <div style="text-align: right">
+            <button
+              class="btn-action btn-secondary"
+              onclick="toggleTextMode()"
+              style="margin-right: 8px">
+              取消
+            </button>
+            <button class="btn-action" onclick="sendMsg()">发送</button>
+          </div>
         </div>
 
         <div id="file-list"></div>
+      </div>
+
+      <input type="file" id="file-input" hidden />
+      <div
+        class="reset-link"
+        onclick="handleManualDisconnect()"
+        id="reset-btn"
+        style="display: none">
+        断开连接
+      </div>
     </div>
 
-    <input type="file" id="file-input" hidden>
-    <div class="reset-link" onclick="handleManualDisconnect()" id="reset-btn" style="display:none">断开连接</div>
-</div>
+    <script>
+      const PREFIX = "AS-LINK-V1-";
+      const generateRandomId = () => Math.random().toString(36).substr(2, 8);
+      const CHUNK_SIZE = 16 * 1024; 
 
-<script>
-    const PREFIX = "AS-LINK-V1-"; 
-    const generateRandomId = () => Math.random().toString(36).substr(2, 8);
-    
-    const ui = {
-        title: document.getElementById('main-title'),
-        sub: document.getElementById('main-subtitle'),
-        statusBox: document.getElementById('status-box'),
-        status: document.getElementById('status'),
-        entry: document.getElementById('entry-panel'),
-        host: document.getElementById('host-panel'),
-        guest: document.getElementById('guest-panel'),
-        transfer: document.getElementById('transfer-panel'),
-        drop: document.getElementById('drop-zone'),
-        list: document.getElementById('file-list'),
-        input: document.getElementById('file-input'),
-        inputs: document.querySelectorAll('.code-input'),
-        resetBtn: document.getElementById('reset-btn'),
-        displayCode: document.getElementById('display-code'),
-        textGroup: document.getElementById('text-input-group'),
-        msgInput: document.getElementById('msg-input')
-    };
-
-    let peer = null;
-    let conn = null;
-    let myId = '';
-    let isHostMode = false; 
-
-    window.addEventListener('paste', (e) => {
-        if (ui.transfer.style.display !== 'block') return;
-        if (document.activeElement === ui.msgInput) return;
-
-        const text = e.clipboardData.getData('text');
-        if (text) {
-            sendTextData(text);
-        }
-    });
-
-    const hashId = window.location.hash.substring(1);
-    if (hashId) {
-        initGuestMode(hashId);
-    } else {
-        initEntryMode();
-    }
-
-    function initEntryMode() {
-        ui.inputs.forEach((input, index) => {
-            input.addEventListener('input', (e) => {
-                if (e.target.value.length === 1) {
-                    if (index < 3) ui.inputs[index + 1].focus();
-                    else checkCode();
-                }
-            });
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && !e.target.value && index > 0) {
-                    ui.inputs[index - 1].focus();
-                }
-            });
+      setTimeout(() => { 
+        ui.msgInput.addEventListener('keydown', (e) => {
+          if ((e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey) {
+            e.preventDefault(); 
+            sendMsg();
+          }
         });
-    }
+      }, 500); 
+      const ui = {
+        title: document.getElementById("main-title"),
+        sub: document.getElementById("main-subtitle"),
+        statusBox: document.getElementById("status-box"),
+        status: document.getElementById("status"),
+        entry: document.getElementById("entry-panel"),
+        host: document.getElementById("host-panel"),
+        guest: document.getElementById("guest-panel"),
+        transfer: document.getElementById("transfer-panel"),
+        drop: document.getElementById("drop-zone"),
+        list: document.getElementById("file-list"),
+        input: document.getElementById("file-input"),
+        inputs: document.querySelectorAll(".code-input"),
+        resetBtn: document.getElementById("reset-btn"),
+        displayCode: document.getElementById("display-code"),
+        textGroup: document.getElementById("text-input-group"),
+        msgInput: document.getElementById("msg-input"),
+      };
 
-    function checkCode() {
-        const code = Array.from(ui.inputs).map(i => i.value).join('');
+      let peer = null;
+      let conn = null;
+      let myId = "";
+      let isHostMode = false;
+      let incomingFiles = {};
+
+      window.addEventListener("paste", (e) => {
+        if (ui.transfer.style.display !== "block") return;
+        if (document.activeElement === ui.msgInput) return;
+        const text = e.clipboardData.getData("text");
+        if (text) sendTextData(text);
+      });
+
+      const hash = window.location.hash.substring(1);
+      if (hash.length === 4 && /^\d+$/.test(hash)) {
+        initGuestMode(PREFIX + hash);
+      } 
+      else if (hash.startsWith(PREFIX)) {
+        initGuestMode(hash);
+      } 
+      else {
+        initEntryMode();
+      }
+
+      function initEntryMode() {
+        ui.inputs.forEach((input, index) => {
+          input.addEventListener("input", (e) => {
+            if (e.target.value.length === 1) {
+              if (index < 3) ui.inputs[index + 1].focus();
+              else checkCode();
+            }
+          });
+          input.addEventListener("keydown", (e) => {
+            if (e.key === "Backspace" && !e.target.value && index > 0) {
+              ui.inputs[index - 1].focus();
+            }
+          });
+        });
+      }
+
+      function checkCode() {
+        const code = Array.from(ui.inputs).map((i) => i.value).join("");
         if (code.length === 4) {
-            ui.inputs.forEach(i => i.blur());
-            startPairing(code);
+          ui.inputs.forEach((i) => i.blur());
+          startPairing(code);
         }
-    }
+      }
 
-    function startPairing(code) {
+      function startPairing(code) {
         const targetId = PREFIX + code;
-        showPanel('guest');
-        updateStatus("正在检查频道...", 'normal');
-        ui.resetBtn.style.display = 'block';
+        showPanel("guest");
+        updateStatus("正在建立直连...", "normal");
+        ui.resetBtn.style.display = "block";
 
         peer = new Peer(targetId);
+        
+        enforcePrivateIPv4(peer);
 
-        peer.on('open', (id) => {
-            becomeHost(code, id); 
+        peer.on("open", (id) => {
+          becomeHost(code, id);
         });
 
-        peer.on('error', (err) => {
-            if (err.type === 'unavailable-id') {
-                peer.destroy();
-                joinAsGuest(targetId);
-            } else {
-                updateStatus("服务错误", 'error');
-                setTimeout(resetApp, 2000);
-            }
+        peer.on("error", (err) => {
+          if (err.type === "unavailable-id") {
+            peer.destroy();
+            joinAsGuest(targetId);
+          } else {
+            updateStatus("服务错误", "error");
+            setTimeout(resetApp, 2000);
+          }
         });
-    }
+      }
 
-    function becomeHost(code, id) {
-        isHostMode = true; 
+      function becomeHost(code, id) {
+        isHostMode = true;
         myId = id;
         ui.displayCode.innerText = code;
         resetToHostWaiting();
-        const shareUrl = `${window.location.href.split('#')[0]}#${id}`;
+        const shareUrl = `${window.location.href.split("#")[0]}#${code}`;
+        
         document.getElementById("qrcode").innerHTML = "";
         new QRCode(document.getElementById("qrcode"), {
-            text: shareUrl, width: 140, height: 140,
-            colorDark : "#000000", colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
+          text: shareUrl,
+          width: 140,
+          height: 140,
+          colorDark: "#000000",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H,
         });
-        peer.on('connection', (c) => { handleConn(c); });
-    }
+        peer.on("connection", (c) => {
+          handleConn(c);
+        });
+      }
 
-    function resetToHostWaiting() {
+      function resetToHostWaiting() {
         conn = null;
-        ui.list.innerHTML = ''; 
+        ui.list.innerHTML = "";
         ui.sub.innerText = "本机已就绪";
-        showPanel('host');
-        updateStatus("等待对方接入...", 'wait');
-        ui.resetBtn.style.display = 'block';
-    }
+        showPanel("host");
+        updateStatus("等待设备接入...", "wait");
+        ui.resetBtn.style.display = "block";
+      }
 
-    function joinAsGuest(hostId) {
-        isHostMode = false; 
-        peer = new Peer(generateRandomId());
-        peer.on('open', () => {
-            const c = peer.connect(hostId);
-            handleConn(c);
-        });
-        peer.on('error', err => {
-            alert('连接失败，请确认配对码');
-            resetApp();
-        });
-    }
-
-    function initGuestMode(targetId) {
+      function joinAsGuest(hostId) {
         isHostMode = false;
-        showPanel('guest');
-        ui.resetBtn.style.display = 'block';
+        peer = new Peer(generateRandomId());
+        
+        enforcePrivateIPv4(peer);
+
+        peer.on("open", () => {
+          const c = peer.connect(hostId);
+          handleConn(c);
+        });
+        peer.on("error", (err) => {
+          alert("连接失败，请确认配对码");
+          resetApp();
+        });
+      }
+
+      function initGuestMode(targetId) {
+        isHostMode = false;
+        showPanel("guest");
+        ui.resetBtn.style.display = "block";
         joinAsGuest(targetId);
-    }
+      }
 
-    function handleConn(connection) {
+      function enforcePrivateIPv4(peerInstance) {
+        if (!peerInstance.socket) return;
+        const originalSend = peerInstance.socket.send;
+        peerInstance.socket.send = function(data) {
+            if (data.type === 'CANDIDATE' && data.payload && data.payload.candidate) {
+                const candidateStr = data.payload.candidate.candidate || "";
+                const isPrivateIPv4 = /(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})/.test(candidateStr);
+                
+                if (!isPrivateIPv4 && !candidateStr.includes('.local')) {
+                     return; 
+                }
+            }
+            originalSend.call(peerInstance.socket, data);
+        };
+      }
+
+      function handleConn(connection) {
         conn = connection;
-        conn.on('open', () => {
-            updateStatus("已安全连接", 'success');
-            showPanel('transfer');
-            ui.sub.innerText = "文件传输加密通道"; 
+        conn.on("open", () => {
+          updateStatus("已连接", "success");
+          showPanel("transfer");
+          try { conn.serialization = 'binary'; } catch(e) {}
         });
-        conn.on('data', (data) => {
-            if(data.type === 'file') receiveFile(data);
-            if(data.type === 'text') receiveText(data);
-        });
-        conn.on('close', () => {
-            if (isHostMode) { resetToHostWaiting(); } else { resetApp(); }
-        });
-    }
 
-    function updateStatus(text, type) {
-        ui.statusBox.style.display = 'block';
+        conn.on("data", (data) => {
+          if (data.constructor === ArrayBuffer || data.constructor === Uint8Array) {
+            handleRawFileChunk(data);
+          } else {
+            if (data.type === "text") receiveText(data);
+            else if (data.type === "file-start") handleFileStart(data);
+          }
+        });
+
+        conn.on("close", () => {
+          if (isHostMode) resetToHostWaiting();
+          else resetApp();
+        });
+      }
+
+      function updateStatus(text, type) {
+        ui.statusBox.style.display = "block";
         ui.status.innerText = text;
-        ui.status.className = 'status-pill';
-        if (type === 'success') ui.status.classList.add('status-active');
-        if (type === 'error') ui.status.classList.add('status-error');
-        if (type === 'wait') ui.status.classList.add('status-wait');
-    }
+        ui.status.className = "status-pill";
+        if (type === "success") ui.status.classList.add("status-active");
+        if (type === "error") ui.status.classList.add("status-error");
+        if (type === "wait") ui.status.classList.add("status-wait");
+      }
 
-    function showPanel(name) {
-        ui.entry.style.display = 'none';
-        ui.host.style.display = 'none';
-        ui.guest.style.display = 'none';
-        ui.transfer.style.display = 'none';
-        if (name === 'entry') ui.entry.style.display = 'block';
-        if (name === 'host') ui.host.style.display = 'block';
-        if (name === 'guest') ui.guest.style.display = 'block';
-        if (name === 'transfer') ui.transfer.style.display = 'block';
-    }
+      function showPanel(name) {
+        ui.entry.style.display = "none";
+        ui.host.style.display = "none";
+        ui.guest.style.display = "none";
+        ui.transfer.style.display = "none";
+        if (name === "entry") ui.entry.style.display = "block";
+        if (name === "host") ui.host.style.display = "block";
+        if (name === "guest") ui.guest.style.display = "block";
+        if (name === "transfer") ui.transfer.style.display = "block";
+      }
 
-    function toggleTextMode() {
-        if (ui.textGroup.style.display === 'block') {
-            ui.textGroup.style.display = 'none';
+      function toggleTextMode() {
+        if (ui.textGroup.style.display === "block") {
+          ui.textGroup.style.display = "none";
         } else {
-            ui.textGroup.style.display = 'block';
-            ui.msgInput.focus();
+          ui.textGroup.style.display = "block";
+          ui.msgInput.focus();
         }
-    }
+      }
 
-    function sendMsg() {
+      function sendMsg() {
         const text = ui.msgInput.value.trim();
         if (!text) return;
         sendTextData(text);
-        ui.msgInput.value = '';
-        ui.textGroup.style.display = 'none';
-    }
+        ui.msgInput.value = "";
+        ui.textGroup.style.display = "none";
+      }
 
-    function sendTextData(text) {
-        if (!conn) return alert('未连接');
-        createLog({ type: 'text', content: text, isSelf: true });
-        conn.send({ type: 'text', content: text });
-    }
+      function sendTextData(text) {
+        if (!conn) return alert("未连接");
+        createLog({ type: "text", content: text, isSelf: true });
+        conn.send({ type: "text", content: text });
+      }
 
-    function receiveText(data) {
-        createLog({ type: 'text', content: data.content, isSelf: false });
-    }
+      function receiveText(data) {
+        createLog({ type: "text", content: data.content, isSelf: false });
+      }
 
-    ui.drop.onclick = () => ui.input.click();
-    ui.input.onchange = () => { if(ui.input.files.length) sendFile(ui.input.files[0]); ui.input.value = ''; };
-    
-    ui.drop.addEventListener('dragover', e => { e.preventDefault(); ui.drop.style.borderColor = 'var(--primary)'; ui.drop.style.background = 'rgba(0,122,255,0.08)'; ui.drop.style.transform = 'scale(1.01)'; });
-    ui.drop.addEventListener('dragleave', () => { ui.drop.style.borderColor = ''; ui.drop.style.background = ''; ui.drop.style.transform = '';});
-    ui.drop.addEventListener('drop', e => {
-        e.preventDefault();
-        ui.drop.style.borderColor = ''; ui.drop.style.background = ''; ui.drop.style.transform = '';
-        if(e.dataTransfer.files.length) sendFile(e.dataTransfer.files[0]);
-    });
+      async function sendFile(file) {
+        if (!conn) return alert("未连接");
 
-    function sendFile(file) {
-        if (!conn) return alert('未连接');
-        const item = createLog({ type: 'file', name: file.name, status: '准备发送...', isSelf: true });
+        const transferId = generateRandomId();
+        const logItem = createLog({
+          type: "file",
+          name: file.name,
+          size: formatSize(file.size),
+          status: "准备发送...",
+          isSelf: true,
+          id: transferId,
+        });
+
+        const progressEl = logItem.querySelector(".progress-fill");
+        const speedEl = logItem.querySelector(".speed-text");
+        const wrapperEl = logItem.querySelector(".progress-wrapper");
+        const statusEl = logItem.querySelector(".file-status");
+
+        wrapperEl.style.display = "block";
+
+        conn.send({
+          type: "file-start",
+          id: transferId,
+          name: file.name,
+          size: file.size,
+          mime: file.type,
+        });
+
+        const dataChannel = conn.dataChannel;
+        const HIGH_WATER_MARK = 16 * 1024 * 1024; 
         
-        const blob = new Blob([file], { type: file.type });
-        conn.send({ type: 'file', name: file.name, file: blob, mime: file.type });
-        
-        const statusEl = item.querySelector('.file-status');
-        statusEl.innerText = '已发送';
-        statusEl.style.color = '#2E7D32';
-    }
+        let offset = 0;
+        const total = file.size;
+        const startTime = Date.now();
+        let lastUpdate = startTime;
 
-    function receiveFile(data) {
-        const blob = new Blob([data.file], { type: data.mime });
+        const BATCH_SIZE = 1024 * 1024; 
+
+        const sendLoop = async () => {
+          while (offset < total) {
+            if (!conn || !conn.open) break;
+
+            if (dataChannel.bufferedAmount > HIGH_WATER_MARK) {
+                await new Promise(r => setTimeout(r, 5));
+                continue; 
+            }
+
+            const end = Math.min(offset + BATCH_SIZE, total);
+            while (offset < end) {
+                const chunk = file.slice(offset, offset + CHUNK_SIZE);
+                try {
+                     conn.send(await chunk.arrayBuffer());
+                } catch(e) {
+                     break; 
+                }
+                offset += chunk.size;
+            }
+
+            const now = Date.now();
+            if (now - lastUpdate > 500 || offset >= total) {
+              const percent = Math.min(100, Math.round((offset / total) * 100));
+              progressEl.style.width = percent + "%";
+
+              const elapsed = (now - startTime) / 1000;
+              const speed = elapsed > 0 ? formatSize(offset / elapsed) + "/s" : "计算中...";
+
+              speedEl.innerHTML = `<span>${percent}%</span><span>${speed}</span>`;
+              statusEl.innerText = "文件发送中...";
+              lastUpdate = now;
+              
+              await new Promise(r => setTimeout(r, 0));
+            }
+          }
+
+          statusEl.innerText = "已发送";
+          statusEl.style.color = "#2E7D32";
+          speedEl.innerHTML = `<span>100%</span><span>完成</span>`;
+        };
+
+        sendLoop();
+      }
+
+      let currentTransferId = null;
+
+      function handleFileStart(data) {
+        currentTransferId = data.id;
+        
+        const logItem = createLog({
+          type: "file",
+          name: data.name,
+          size: formatSize(data.size),
+          status: "准备接收...",
+          isSelf: false,
+          id: data.id,
+        });
+
+        const progressEl = logItem.querySelector(".progress-fill");
+        const speedEl = logItem.querySelector(".speed-text");
+        const statusEl = logItem.querySelector(".file-status");
+        
+        logItem.querySelector(".progress-wrapper").style.display = "block";
+
+        incomingFiles[data.id] = {
+          chunks: [],
+          name: data.name,
+          size: data.size,
+          mime: data.mime,
+          received: 0,
+          startTime: Date.now(),
+          el: logItem,
+          ui: { progressEl, speedEl, statusEl },
+          uiTimer: setInterval(() => {
+             updateFileUI(data.id);
+          }, 500)
+        };
+      }
+
+      function handleRawFileChunk(buffer) {
+        if (!currentTransferId || !incomingFiles[currentTransferId]) return;
+        const fileData = incomingFiles[currentTransferId];
+        fileData.chunks.push(buffer);
+        fileData.received += buffer.byteLength;
+        if (fileData.received >= fileData.size) {
+          finishFileReceive(currentTransferId);
+          currentTransferId = null;
+        }
+      }
+
+      function updateFileUI(id) {
+         const fileData = incomingFiles[id];
+         if (!fileData) return;
+         const now = Date.now();
+         const elapsed = (now - fileData.startTime) / 1000;
+         const speedBytes = elapsed > 0 ? fileData.received / elapsed : 0;
+         const speed = formatSize(speedBytes) + "/s";
+         const percent = Math.min(100, Math.round((fileData.received / fileData.size) * 100));
+         fileData.ui.progressEl.style.width = percent + "%";
+         fileData.ui.speedEl.innerHTML = `<span>${percent}%</span><span>${speed}</span>`;
+         fileData.ui.statusEl.innerText = "接收中...";
+      }
+
+      function finishFileReceive(id) {
+        const fileData = incomingFiles[id];
+        if (fileData.uiTimer) {
+            clearInterval(fileData.uiTimer);
+            fileData.uiTimer = null;
+        }
+        fileData.ui.progressEl.style.width = "100%";
+        fileData.ui.speedEl.innerHTML = `<span>100%</span><span>完成</span>`;
+        fileData.ui.statusEl.innerText = "收到文件";
+        fileData.ui.statusEl.style.color = "#2E7D32";
+        const blob = new Blob(fileData.chunks, { type: fileData.mime });
         const url = URL.createObjectURL(blob);
-        createLog({ type: 'file', name: data.name, url: url, status: '收到文件', isSelf: false });
-    }
+        const btn = document.createElement("a");
+        btn.href = url;
+        btn.download = fileData.name;
+        btn.className = "btn-action";
+        btn.innerText = "下载";
+        fileData.el.querySelector(".file-item-header").appendChild(btn);
+        fileData.chunks = null; 
+      }
 
-    function createLog(data) {
-        const div = document.createElement('div');
-        div.className = 'file-item';
-        
-        if (data.type === 'text') {
-            div.classList.add('text-card');
-            
-            const isUrl = /^(http|https):\/\/[^ "]+$/.test(data.content);
-            let displayContent = escapeHtml(data.content);
-            let btnsHtml = `<button class="btn-action btn-secondary" onclick="copyText(this, '${escapeHtml(data.content).replace(/'/g, "\\'")}')">复制</button>`;
-            
-            if (isUrl) {
-                displayContent = `<a href="${data.content}" target="_blank">${displayContent}</a>`;
-                btnsHtml = `
+      function formatSize(bytes) {
+        if (bytes === 0) return "0 B";
+        const k = 1024;
+        const sizes = ["B", "KB", "MB", "GB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+      }
+
+      function createLog(data) {
+        const div = document.createElement("div");
+        div.className = "file-item";
+        if (data.id) div.id = "log-" + data.id;
+
+        if (data.type === "text") {
+          div.classList.add("text-card");
+          const isUrl = /^((https?:\/\/)?(www\.)?)[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}((\/[^\s"]*)?)$/i.test(data.content);          console.log(isUrl,'url')
+          let displayContent = escapeHtml(data.content);
+          let btnsHtml = `<button class="btn-action btn-secondary" onclick="copyText(this, '${escapeHtml(
+            data.content
+          ).replace(/'/g, "\\'")}')">复制</button>`;
+
+          if (isUrl) {
+            displayContent = `<a href="${data.content}" target="_blank">${displayContent}</a>`;
+            btnsHtml = `
                     <div class="btn-group">
                         <a href="${data.content}" target="_blank" class="btn-action">打开</a>
                         ${btnsHtml}
                     </div>
                 `;
-            }
+          }
 
-            div.innerHTML = `
-                <div class="file-info">
-                    <div class="text-content">${displayContent}</div>
-                    <div class="file-status">${data.isSelf ? '我发送的消息' : '收到消息'}</div>
+          div.innerHTML = `
+                <div class="file-item-header">
+                    <div class="file-info">
+                        <div class="text-content">${displayContent}</div>
+                        <div class="file-status">${
+                          data.isSelf ? "我发送的消息" : "收到消息"
+                        }</div>
+                    </div>
+                    ${btnsHtml}
                 </div>
-                ${btnsHtml}
             `;
         } else {
-            div.innerHTML = `
-                <div class="file-info">
-                    <div class="file-name">${data.name}</div>
-                    <div class="file-status">${data.status}</div>
+          div.innerHTML = `
+                <div class="file-item-header">
+                    <div class="file-info">
+                        <div class="file-name">${data.name}</div>
+                        <div class="file-status">${data.status} ${
+            data.size ? "- " + data.size : ""
+          }</div>
+                    </div>
+                </div>
+                <div class="progress-wrapper">
+                    <div class="progress-bg">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <div class="progress-text status-pill-text">
+                        <span class="speed-text" style="display:flex; justify-content:space-between; width:100%">
+                            <span>0%</span><span>等待中...</span>
+                        </span>
+                    </div>
                 </div>
             `;
-            if (data.url) {
-                const btn = document.createElement('a');
-                btn.href = data.url;
-                btn.download = data.name;
-                btn.className = 'btn-action';
-                btn.innerText = '下载';
-                div.appendChild(btn);
-            }
         }
-        
+
         ui.list.prepend(div);
         return div;
-    }
+      }
 
-    function copyText(btn, text) {
+      ui.drop.onclick = () => ui.input.click();
+      ui.input.onchange = () => {
+        if (ui.input.files.length) sendFile(ui.input.files[0]);
+        ui.input.value = "";
+      };
+
+      ui.drop.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        ui.drop.style.borderColor = "var(--primary)";
+        ui.drop.style.background = "rgba(0,122,255,0.08)";
+        ui.drop.style.transform = "scale(1.01)";
+      });
+      ui.drop.addEventListener("dragleave", () => {
+        ui.drop.style.borderColor = "";
+        ui.drop.style.background = "";
+        ui.drop.style.transform = "";
+      });
+      ui.drop.addEventListener("drop", (e) => {
+        e.preventDefault();
+        ui.drop.style.borderColor = "";
+        ui.drop.style.background = "";
+        ui.drop.style.transform = "";
+        if (e.dataTransfer.files.length) sendFile(e.dataTransfer.files[0]);
+      });
+
+      function copyText(btn, text) {
         navigator.clipboard.writeText(text).then(() => {
-            const original = btn.innerText;
-            btn.innerText = '已复制';
-            btn.style.color = '#2E7D32';
-            setTimeout(() => {
-                btn.innerText = original;
-                btn.style.color = '';
-            }, 2000);
+          const original = btn.innerText;
+          btn.innerText = "已复制";
+          btn.style.color = "#2E7D32";
+          setTimeout(() => {
+            btn.innerText = original;
+            btn.style.color = "";
+          }, 2000);
         });
-    }
+      }
 
-    function escapeHtml(text) {
+      function escapeHtml(text) {
         if (!text) return text;
-        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-    }
+        return text
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
 
-    function handleManualDisconnect() {
+      function handleManualDisconnect() {
         if (conn) conn.close();
         if (isHostMode) resetApp();
         else resetApp();
-    }
+      }
 
-    function resetApp() {
-        window.location.href = window.location.href.split('#')[0];
-    }
-</script>
-<style>@keyframes pulse { 0% { opacity: 0.6; transform: scale(0.96); } 50% { opacity: 1; transform: scale(1); } 100% { opacity: 0.6; transform: scale(0.96); } }</style>
-</body>
+      function resetApp() {
+        window.location.href = window.location.href.split("#")[0];
+      }
+    </script>
+    <style>
+      @keyframes pulse {
+        0% { opacity: 0.6; transform: scale(0.96); }
+        50% { opacity: 1; transform: scale(1); }
+        100% { opacity: 0.6; transform: scale(0.96); }
+      }
+    </style>
+  </body>
 </html>
