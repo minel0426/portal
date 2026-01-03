@@ -81,11 +81,10 @@
             display: flex; flex-direction: column; overflow: hidden; 
             box-shadow: 0 20px 60px rgba(0,0,0,0.4);
             animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transition: all 0.3s ease; /* 添加过渡动画 */
+            transition: all 0.3s ease; 
         }
         @keyframes popIn { from{opacity:0; transform:scale(0.9)} to{opacity:1; transform:scale(1)} }
 
-        /* 展开模式下的样式 */
         .detail-window.expanded .detail-img-box { height: 0; flex: 0; display: none; }
         .detail-window.expanded .detail-comments { height: 100%; flex: 1; border-top: none; }
 
@@ -95,7 +94,6 @@
         
         .detail-comments { height: 40%; background: #fff; display: flex; flex-direction: column; border-top: 1px solid #eee; transition: all 0.3s; position: relative; }
         
-        /* 评论区把手/展开按钮 */
         .comment-handle {
             width: 100%; height: 20px; display: flex; align-items: center; justify-content: center;
             cursor: pointer; background: #fff; border-bottom: 1px solid #f9f9f9; flex-shrink: 0;
@@ -113,7 +111,18 @@
         .cmt-input-box { padding: 10px 15px; display: flex; gap: 10px; align-items: center; padding-bottom: 20px; }
         .cmt-input { flex: 1; padding: 10px; border-radius: 18px; border: 1px solid #eee; outline: none; background: #f9f9f9; font-size: 14px; }
         .cmt-icon-btn { font-size: 24px; color: #007AFF; cursor: pointer; display: flex; align-items: center; }
-        .cmt-content-img { display: block; max-width: 150px; max-height: 150px; border-radius: 8px; margin-top: 5px; border: 1px solid #eee; }
+        .cmt-content-img { display: block; max-width: 150px; max-height: 150px; border-radius: 8px; margin-top: 5px; border: 1px solid #eee; cursor: zoom-in; }
+
+        /* 新增：图片查看器样式 */
+        .image-viewer-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 2000; display: none;
+            align-items: center; justify-content: center; cursor: zoom-out;
+            animation: fadeIn 0.2s;
+        }
+        .image-viewer-overlay.show { display: flex; }
+        .image-viewer-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 
         .ri-heart-fill { color: var(--danger) !important; animation: heartBeat 0.3s; }
         @keyframes heartBeat { 0%{transform:scale(1)} 50%{transform:scale(1.3)} 100%{transform:scale(1)} }
@@ -239,6 +248,10 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <div class="image-viewer-overlay" id="image-viewer" onclick="closeImageViewer()">
+        <img class="image-viewer-img" id="viewer-img">
     </div>
 
     <div class="modal-overlay" id="confirm-modal">
@@ -401,9 +414,7 @@
         reader.readAsDataURL(file);
     }
 
-    // 核心压缩函数
     function compressImage(file, callback) {
-        // 如果小于 1MB，直接返回原图，不压缩
         if (file.size <= 1024 * 1024) {
             const reader = new FileReader();
             reader.onload = (e) => callback(e.target.result);
@@ -419,9 +430,8 @@
                 const canvas = document.createElement('canvas');
                 let width = img.width;
                 let height = img.height;
-                const maxDim = 1280; // 最大边长限制
+                const maxDim = 1280; 
 
-                // 计算缩放比例
                 if (width > height) {
                     if (width > maxDim) {
                         height *= maxDim / width;
@@ -439,7 +449,6 @@
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
                 
-                // 压缩为 JPEG，质量 0.7
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
                 callback(dataUrl);
             };
@@ -452,7 +461,6 @@
         const file = input.files[0];
         if(!file) return;
         
-        // 使用压缩函数处理
         compressImage(file, (base64) => {
             currentCommentImgBase64 = base64;
             const previewBox = document.getElementById('cmt-preview');
@@ -461,7 +469,7 @@
             previewBox.style.display = 'block';
         });
         
-        input.value = ''; // 清空 input 方便下次选同一张图
+        input.value = '';
     }
     
     function clearCommentImage() {
@@ -470,7 +478,6 @@
         document.getElementById('cmt-img-upload').value = '';
     }
 
-    // 切换评论区展开/收起
     function toggleCommentExpand() {
         const win = document.getElementById('detail-win');
         win.classList.toggle('expanded');
@@ -672,7 +679,6 @@
         currentDetailId = item.id;
         document.getElementById('detail-modal').classList.add('show');
         
-        // 重置状态
         document.getElementById('detail-img').classList.remove('fullscreen-active');
         document.getElementById('fs-btn').classList.remove('fullscreen-mode');
         document.getElementById('fs-btn').querySelector('i').className = 'ri-fullscreen-line';
@@ -734,7 +740,7 @@
         list.innerHTML = '';
         if (data && data.length > 0) {
             data.forEach(c => {
-                const imgHtml = c.img_content ? `<img src="${c.img_content}" class="cmt-content-img" onclick="window.open(this.src)">` : '';
+                const imgHtml = c.img_content ? `<img src="${c.img_content}" class="cmt-content-img" onclick="viewImage(this.src)">` : '';
                 
                 list.innerHTML += `
                     <div style="margin-bottom:12px;">
@@ -747,6 +753,16 @@
             });
             list.scrollTop = list.scrollHeight;
         } else list.innerHTML = '<div style="text-align:center; color:#ccc; margin-top:30px; font-size:12px">暂无评论</div>';
+    }
+
+    function viewImage(src) {
+        const viewer = document.getElementById('image-viewer');
+        const img = document.getElementById('viewer-img');
+        img.src = src;
+        viewer.classList.add('show');
+    }
+    function closeImageViewer() {
+        document.getElementById('image-viewer').classList.remove('show');
     }
 
     async function postComment() {
