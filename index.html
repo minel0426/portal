@@ -19,7 +19,6 @@
             --shadow: 0 8px 30px rgba(0,0,0,0.12);
             --danger: #FF3B30;
         }
-        /* 保持移动端优化 */
         html, body { 
             margin: 0; 
             padding: 0;
@@ -101,7 +100,6 @@
             background: #eee; display: block; border: 1px solid #f0f0f0; 
         }
         
-        /* 修改：增加底部信息栏布局，用于同时显示评论数和点赞数 */
         .art-info-row {
             margin-top: 5px; display: flex; justify-content: flex-end; 
             align-items: center; gap: 10px; color: #666; font-size: 11px; font-weight: 500; padding-right: 2px;
@@ -124,7 +122,6 @@
         }
         .detail-img { max-width: 100%; max-height: 100%; object-fit: contain; transition: all 0.3s; }
         
-        /* CSS全屏模式样式 */
         .detail-img.fullscreen-active {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: #000; z-index: 9999; object-fit: contain; border-radius: 0; padding: 0;
@@ -145,9 +142,39 @@
         }
 
         .cmt-list { flex: 1; overflow-y: auto; padding: 15px; }
-        .cmt-input-box { padding: 10px 15px; border-top: 1px solid #f5f5f5; display: flex; gap: 10px; background: #fff; padding-bottom: 20px; }
-        .cmt-input { flex: 1; padding: 10px; border-radius: 18px; border: 1px solid #eee; outline: none; background: #f9f9f9; font-size: 14px; }
         
+        /* 修改：评论输入框布局 */
+        .cmt-input-area { border-top: 1px solid #f5f5f5; background: #fff; display: flex; flex-direction: column; }
+        
+        /* 图片预览区 */
+        .cmt-preview { 
+            padding: 10px 15px 0; display: none; 
+        }
+        .preview-thumb { 
+            height: 60px; width: auto; border-radius: 8px; border: 1px solid #eee; 
+            position: relative;
+        }
+        .preview-close {
+            position: absolute; top: -8px; left: 55px; 
+            background: #ccc; color: white; border-radius: 50%; 
+            width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 12px;
+        }
+
+        .cmt-input-box { padding: 10px 15px; display: flex; gap: 10px; align-items: center; padding-bottom: 20px; }
+        .cmt-input { flex: 1; padding: 10px; border-radius: 18px; border: 1px solid #eee; outline: none; background: #f9f9f9; font-size: 14px; }
+        .cmt-icon-btn { font-size: 24px; color: #007AFF; cursor: pointer; display: flex; align-items: center; }
+        
+        /* 评论里的图片样式 */
+        .cmt-content-img {
+            display: block;
+            max-width: 150px;
+            max-height: 150px;
+            border-radius: 8px;
+            margin-top: 5px;
+            border: 1px solid #eee;
+        }
+
         .ri-heart-fill { color: var(--danger) !important; animation: heartBeat 0.3s; }
         @keyframes heartBeat { 0%{transform:scale(1)} 50%{transform:scale(1.3)} 100%{transform:scale(1)} }
 
@@ -180,6 +207,8 @@
     </div>
 
     <input type="file" id="img-upload" hidden accept="image/*" onchange="handleImageUpload(this)">
+    
+    <input type="file" id="cmt-img-upload" hidden accept="image/*" onchange="handleCommentImage(this)">
 
     <div class="toolbar">
         <button class="tool-btn" onclick="undo()"><i class="ri-arrow-go-back-line"></i></button>
@@ -249,9 +278,21 @@
 
             <div class="detail-comments">
                 <div class="cmt-list" id="cmt-list"></div>
-                <div class="cmt-input-box">
-                    <input class="cmt-input" id="cmt-input" placeholder="写下你的想法...">
-                    <button style="border:none; background:var(--accent); color:white; padding:0 15px; border-radius:15px; font-weight:bold; font-size:13px" onclick="postComment()">发送</button>
+                
+                <div class="cmt-input-area">
+                    <div class="cmt-preview" id="cmt-preview">
+                        <div style="position:relative; display:inline-block">
+                            <img id="cmt-preview-img" class="preview-thumb">
+                            <div class="preview-close" onclick="clearCommentImage()"><i class="ri-close-line"></i></div>
+                        </div>
+                    </div>
+                    <div class="cmt-input-box">
+                        <div class="cmt-icon-btn" onclick="document.getElementById('cmt-img-upload').click()">
+                            <i class="ri-image-add-line"></i>
+                        </div>
+                        <input class="cmt-input" id="cmt-input" placeholder="写下你的想法...">
+                        <button style="border:none; background:var(--accent); color:white; padding:0 15px; height: 38px; border-radius:15px; font-weight:bold; font-size:13px" onclick="postComment()">发送</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -293,6 +334,7 @@
     let historySteps = []; 
     let bgType = 'grid'; 
     let currentDetailId = null;
+    let currentCommentImgBase64 = null;
 
     function showToast(msg) {
         const t = document.getElementById('toast');
@@ -416,6 +458,36 @@
         reader.readAsDataURL(file);
     }
 
+    // 处理评论图片的上传和预览
+    function handleCommentImage(input) {
+        const file = input.files[0];
+        if(!file) return;
+        
+        // 简单限制一下图片大小，防止Base64太长
+        if (file.size > 2 * 1024 * 1024) {
+            alert('图片太大了，请选择小于2MB的图片');
+            input.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (f) => {
+            currentCommentImgBase64 = f.target.result;
+            // 显示预览
+            const previewBox = document.getElementById('cmt-preview');
+            const previewImg = document.getElementById('cmt-preview-img');
+            previewImg.src = currentCommentImgBase64;
+            previewBox.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+    
+    function clearCommentImage() {
+        currentCommentImgBase64 = null;
+        document.getElementById('cmt-preview').style.display = 'none';
+        document.getElementById('cmt-img-upload').value = '';
+    }
+
     function toggleColorMenu() {
         document.getElementById('color-menu').classList.toggle('show');
         document.getElementById('bg-menu').classList.remove('show');
@@ -526,7 +598,6 @@
                 div.className = 'art-item'; 
                 const bgClass = item.bg_style ? 'bg-'+item.bg_style : 'bg-grid';
                 
-                // 修改：显示评论图标和数量
                 div.innerHTML = `
                     <div style="position:relative">
                         <img src="${item.content}" class="art-img ${bgClass}">
@@ -673,10 +744,16 @@
         list.innerHTML = '';
         if (data && data.length > 0) {
             data.forEach(c => {
+                // 如果有图片，就渲染 img 标签
+                const imgHtml = c.img_content ? `<img src="${c.img_content}" class="cmt-content-img" onclick="window.open(this.src)">` : '';
+                
                 list.innerHTML += `
                     <div style="margin-bottom:12px;">
                         <div style="font-size:12px; font-weight:bold; color:#333">${c.nickname} <span style="color:#bbb;font-weight:normal">${dayjs(c.created_at).format('YYYY-MM-DD HH:mm')}</span></div>
-                        <div style="font-size:13px; color:#555; margin-top:2px; background:#f2f2f7; padding:6px 10px; border-radius:10px; display:inline-block">${c.content}</div>
+                        <div style="font-size:13px; color:#555; margin-top:2px; background:#f2f2f7; padding:6px 10px; border-radius:10px; display:inline-block">
+                            ${c.content}
+                            ${imgHtml}
+                        </div>
                     </div>`;
             });
             list.scrollTop = list.scrollHeight;
@@ -686,11 +763,27 @@
     async function postComment() {
         const input = document.getElementById('cmt-input');
         const txt = input.value.trim();
-        if (!txt) return showToast('内容不能为空');
+        
+        // 允许只发图片不发文字
+        if (!txt && !currentCommentImgBase64) return showToast('内容不能为空');
+        
         let name = localStorage.getItem('nickname') || '匿名';
-        const { error } = await _supabase.from('sub_comments').insert({ parent_id: currentDetailId, nickname: name, content: txt });
+        
+        const payload = { 
+            parent_id: currentDetailId, 
+            nickname: name, 
+            content: txt,
+            img_content: currentCommentImgBase64 // 带上图片数据
+        };
+
+        const { error } = await _supabase.from('sub_comments').insert(payload);
         if (error) showToast('评论失败');
-        else { input.value = ''; loadComments(currentDetailId); showToast('已发送'); }
+        else { 
+            input.value = ''; 
+            clearCommentImage(); // 清空预览
+            loadComments(currentDetailId); 
+            showToast('已发送'); 
+        }
     }
 
     function closeModal(id) { document.getElementById(id).classList.remove('show'); }
