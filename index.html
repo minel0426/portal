@@ -20,26 +20,13 @@
             --danger: #FF3B30;
         }
         html, body { 
-            margin: 0; 
-            padding: 0;
-            width: 100%; 
-            height: 100%; 
-            overflow: hidden; 
-            background: #f2f2f7; 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            overflow: hidden; background: #f2f2f7; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            touch-action: none; 
-            overscroll-behavior: none; 
+            touch-action: none; overscroll-behavior: none; 
         }
         
-        #canvas-wrapper { 
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            z-index: 1; 
-        }
-
+        #canvas-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
         .bg-grid { background-image: radial-gradient(#ccc 1px, transparent 1px); background-size: 20px 20px; background-color: #fff; }
         .bg-white { background-color: #fff; }
         .bg-dark { background-color: #222; }
@@ -79,31 +66,12 @@
         @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
 
         .gallery-head { padding: 15px; background: white; display: flex; justify-content: space-between; align-items: center; font-weight: bold; border-bottom: 1px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.02); z-index: 10; }
+        .gallery-body { flex: 1; overflow-y: auto; padding: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; align-content: start; }
         
-        .gallery-body { 
-            flex: 1; overflow-y: auto; padding: 10px; 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
-            gap: 8px; 
-            align-content: start; 
-        }
-        
-        .art-item { 
-            background: white; padding: 5px; border-radius: 4px; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer; 
-            position: relative; transition: transform 0.2s;
-        }
+        .art-item { background: white; padding: 5px; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer; position: relative; transition: transform 0.2s; }
         .art-item:active { transform: scale(0.98); }
-        
-        .art-img { 
-            width: 100%; aspect-ratio: 1; object-fit: cover; 
-            background: #eee; display: block; border: 1px solid #f0f0f0; 
-        }
-        
-        .art-info-row {
-            margin-top: 5px; display: flex; justify-content: flex-end; 
-            align-items: center; gap: 10px; color: #666; font-size: 11px; font-weight: 500; padding-right: 2px;
-        }
+        .art-img { width: 100%; aspect-ratio: 1; object-fit: cover; background: #eee; display: block; border: 1px solid #f0f0f0; }
+        .art-info-row { margin-top: 5px; display: flex; justify-content: flex-end; align-items: center; gap: 10px; color: #666; font-size: 11px; font-weight: 500; padding-right: 2px; }
         .icon-pair { display: flex; align-items: center; gap: 3px; }
         .art-like-badge { cursor: pointer; }
 
@@ -113,67 +81,39 @@
             display: flex; flex-direction: column; overflow: hidden; 
             box-shadow: 0 20px 60px rgba(0,0,0,0.4);
             animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.3s ease; /* 添加过渡动画 */
         }
         @keyframes popIn { from{opacity:0; transform:scale(0.9)} to{opacity:1; transform:scale(1)} }
 
-        .detail-img-box { 
-            flex: 1; display: flex; align-items: center; justify-content: center; 
-            overflow: hidden; position: relative; background: #f8f8f8;
-        }
+        /* 展开模式下的样式 */
+        .detail-window.expanded .detail-img-box { height: 0; flex: 0; display: none; }
+        .detail-window.expanded .detail-comments { height: 100%; flex: 1; border-top: none; }
+
+        .detail-img-box { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; background: #f8f8f8; transition: all 0.3s; }
         .detail-img { max-width: 100%; max-height: 100%; object-fit: contain; transition: all 0.3s; }
+        .detail-img.fullscreen-active { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 9999; object-fit: contain; border-radius: 0; padding: 0; }
         
-        .detail-img.fullscreen-active {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: #000; z-index: 9999; object-fit: contain; border-radius: 0; padding: 0;
-        }
+        .detail-comments { height: 40%; background: #fff; display: flex; flex-direction: column; border-top: 1px solid #eee; transition: all 0.3s; position: relative; }
         
-        .detail-comments { 
-            height: 40%; background: #fff; display: flex; flex-direction: column; border-top: 1px solid #eee;
+        /* 评论区把手/展开按钮 */
+        .comment-handle {
+            width: 100%; height: 20px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; background: #fff; border-bottom: 1px solid #f9f9f9; flex-shrink: 0;
         }
-        
-        .fullscreen-btn {
-            position: absolute; bottom: 15px; right: 15px;
-            background: rgba(0,0,0,0.6); color: white; width: 32px; height: 32px; 
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            z-index: 10;
-        }
-        .fullscreen-btn.fullscreen-mode {
-            position: fixed; z-index: 10000; bottom: 30px; right: 30px; width: 40px; height: 40px; background: rgba(255,255,255,0.3);
-        }
+        .comment-handle-bar { width: 40px; height: 4px; background: #e0e0e0; border-radius: 2px; }
+
+        .fullscreen-btn { position: absolute; bottom: 15px; right: 15px; background: rgba(0,0,0,0.6); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 10; }
+        .fullscreen-btn.fullscreen-mode { position: fixed; z-index: 10000; bottom: 30px; right: 30px; width: 40px; height: 40px; background: rgba(255,255,255,0.3); }
 
         .cmt-list { flex: 1; overflow-y: auto; padding: 15px; }
-        
-        /* 修改：评论输入框布局 */
         .cmt-input-area { border-top: 1px solid #f5f5f5; background: #fff; display: flex; flex-direction: column; }
-        
-        /* 图片预览区 */
-        .cmt-preview { 
-            padding: 10px 15px 0; display: none; 
-        }
-        .preview-thumb { 
-            height: 60px; width: auto; border-radius: 8px; border: 1px solid #eee; 
-            position: relative;
-        }
-        .preview-close {
-            position: absolute; top: -8px; left: 55px; 
-            background: #ccc; color: white; border-radius: 50%; 
-            width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; font-size: 12px;
-        }
-
+        .cmt-preview { padding: 10px 15px 0; display: none; }
+        .preview-thumb { height: 60px; width: auto; border-radius: 8px; border: 1px solid #eee; position: relative; }
+        .preview-close { position: absolute; top: -8px; left: 55px; background: #ccc; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; }
         .cmt-input-box { padding: 10px 15px; display: flex; gap: 10px; align-items: center; padding-bottom: 20px; }
         .cmt-input { flex: 1; padding: 10px; border-radius: 18px; border: 1px solid #eee; outline: none; background: #f9f9f9; font-size: 14px; }
         .cmt-icon-btn { font-size: 24px; color: #007AFF; cursor: pointer; display: flex; align-items: center; }
-        
-        /* 评论里的图片样式 */
-        .cmt-content-img {
-            display: block;
-            max-width: 150px;
-            max-height: 150px;
-            border-radius: 8px;
-            margin-top: 5px;
-            border: 1px solid #eee;
-        }
+        .cmt-content-img { display: block; max-width: 150px; max-height: 150px; border-radius: 8px; margin-top: 5px; border: 1px solid #eee; }
 
         .ri-heart-fill { color: var(--danger) !important; animation: heartBeat 0.3s; }
         @keyframes heartBeat { 0%{transform:scale(1)} 50%{transform:scale(1.3)} 100%{transform:scale(1)} }
@@ -207,7 +147,6 @@
     </div>
 
     <input type="file" id="img-upload" hidden accept="image/*" onchange="handleImageUpload(this)">
-    
     <input type="file" id="cmt-img-upload" hidden accept="image/*" onchange="handleCommentImage(this)">
 
     <div class="toolbar">
@@ -260,23 +199,27 @@
     </div>
 
     <div class="modal-overlay" id="detail-modal" onclick="closeModal('detail-modal')">
-        <div class="detail-window" onclick="event.stopPropagation()">
+        <div class="detail-window" id="detail-win" onclick="event.stopPropagation()">
             <div class="detail-img-box" id="detail-box">
                 <img id="detail-img" class="detail-img">
                 <div id="fs-btn" class="fullscreen-btn" onclick="toggleDetailFullscreen()"><i class="ri-fullscreen-line"></i></div>
             </div>
             
-            <div class="gallery-head" style="border-bottom:1px solid #eee; padding:10px 15px; font-size:14px">
-                <div style="display:flex; align-items:center; gap:8px">
-                    <span id="detail-author">匿名</span>
-                </div>
-                <div id="detail-like-btn" onclick="likeCurrentDetail()" style="display:flex; align-items:center; gap:5px; color:#666; cursor:pointer">
-                    <i class="ri-heart-line" style="font-size:20px"></i>
-                    <span style="font-size:14px">0</span>
-                </div>
-            </div>
-
             <div class="detail-comments">
+                <div class="comment-handle" onclick="toggleCommentExpand()">
+                    <div class="comment-handle-bar"></div>
+                </div>
+
+                <div class="gallery-head" style="border-bottom:1px solid #eee; padding:5px 15px; font-size:14px; border-top:none;">
+                    <div style="display:flex; align-items:center; gap:8px">
+                        <span id="detail-author">匿名</span>
+                    </div>
+                    <div id="detail-like-btn" onclick="likeCurrentDetail()" style="display:flex; align-items:center; gap:5px; color:#666; cursor:pointer">
+                        <i class="ri-heart-line" style="font-size:20px"></i>
+                        <span style="font-size:14px">0</span>
+                    </div>
+                </div>
+
                 <div class="cmt-list" id="cmt-list"></div>
                 
                 <div class="cmt-input-area">
@@ -458,34 +401,79 @@
         reader.readAsDataURL(file);
     }
 
-    // 处理评论图片的上传和预览
+    // 核心压缩函数
+    function compressImage(file, callback) {
+        // 如果小于 1MB，直接返回原图，不压缩
+        if (file.size <= 1024 * 1024) {
+            const reader = new FileReader();
+            reader.onload = (e) => callback(e.target.result);
+            reader.readAsDataURL(file);
+            return;
+        }
+
+        showToast('图片较大，正在压缩...');
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                const maxDim = 1280; // 最大边长限制
+
+                // 计算缩放比例
+                if (width > height) {
+                    if (width > maxDim) {
+                        height *= maxDim / width;
+                        width = maxDim;
+                    }
+                } else {
+                    if (height > maxDim) {
+                        width *= maxDim / height;
+                        height = maxDim;
+                    }
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // 压缩为 JPEG，质量 0.7
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                callback(dataUrl);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
     function handleCommentImage(input) {
         const file = input.files[0];
         if(!file) return;
         
-        // 简单限制一下图片大小，防止Base64太长
-        if (file.size > 2 * 1024 * 1024) {
-            alert('图片太大了，请选择小于2MB的图片');
-            input.value = '';
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (f) => {
-            currentCommentImgBase64 = f.target.result;
-            // 显示预览
+        // 使用压缩函数处理
+        compressImage(file, (base64) => {
+            currentCommentImgBase64 = base64;
             const previewBox = document.getElementById('cmt-preview');
             const previewImg = document.getElementById('cmt-preview-img');
             previewImg.src = currentCommentImgBase64;
             previewBox.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
+        });
+        
+        input.value = ''; // 清空 input 方便下次选同一张图
     }
     
     function clearCommentImage() {
         currentCommentImgBase64 = null;
         document.getElementById('cmt-preview').style.display = 'none';
         document.getElementById('cmt-img-upload').value = '';
+    }
+
+    // 切换评论区展开/收起
+    function toggleCommentExpand() {
+        const win = document.getElementById('detail-win');
+        win.classList.toggle('expanded');
     }
 
     function toggleColorMenu() {
@@ -684,9 +672,11 @@
         currentDetailId = item.id;
         document.getElementById('detail-modal').classList.add('show');
         
+        // 重置状态
         document.getElementById('detail-img').classList.remove('fullscreen-active');
         document.getElementById('fs-btn').classList.remove('fullscreen-mode');
         document.getElementById('fs-btn').querySelector('i').className = 'ri-fullscreen-line';
+        document.getElementById('detail-win').classList.remove('expanded');
 
         const img = document.getElementById('detail-img');
         img.src = item.content;
@@ -744,7 +734,6 @@
         list.innerHTML = '';
         if (data && data.length > 0) {
             data.forEach(c => {
-                // 如果有图片，就渲染 img 标签
                 const imgHtml = c.img_content ? `<img src="${c.img_content}" class="cmt-content-img" onclick="window.open(this.src)">` : '';
                 
                 list.innerHTML += `
@@ -764,7 +753,6 @@
         const input = document.getElementById('cmt-input');
         const txt = input.value.trim();
         
-        // 允许只发图片不发文字
         if (!txt && !currentCommentImgBase64) return showToast('内容不能为空');
         
         let name = localStorage.getItem('nickname') || '匿名';
@@ -773,14 +761,14 @@
             parent_id: currentDetailId, 
             nickname: name, 
             content: txt,
-            img_content: currentCommentImgBase64 // 带上图片数据
+            img_content: currentCommentImgBase64 
         };
 
         const { error } = await _supabase.from('sub_comments').insert(payload);
         if (error) showToast('评论失败');
         else { 
             input.value = ''; 
-            clearCommentImage(); // 清空预览
+            clearCommentImage(); 
             loadComments(currentDetailId); 
             showToast('已发送'); 
         }
