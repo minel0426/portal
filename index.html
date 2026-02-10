@@ -1,88 +1,235 @@
 <!doctype html>
-<html>
+<html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>OpenClaw Web Demo</title>
+    <title>Jarvis - OpenClaw Web</title>
     <style>
-      body { font-family: system-ui, sans-serif; max-width: 900px; margin: 24px auto; padding: 0 16px; }
-      textarea { width: 100%; height: 90px; }
-      pre { background: #111; color: #eee; padding: 12px; overflow: auto; }
-      .row { display: flex; gap: 8px; align-items: center; }
-      input[type=password] { flex: 1; }
-      button { padding: 8px 12px; }
+      :root {
+        --bg-color: #f5f5f7;
+        --msg-user: #007aff;
+        --msg-ai: #e9e9eb;
+        --text-user: #ffffff;
+        --text-ai: #000000;
+      }
+
+      body { 
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+        background-color: var(--bg-color);
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      /* 配置栏 - 紧凑型 */
+      .config-bar {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(10px);
+        padding: 10px 20px;
+        border-bottom: 1px solid #d1d1d6;
+        display: flex;
+        gap: 10px;
+        font-size: 12px;
+      }
+
+      .config-bar input {
+        border: 1px solid #d1d1d6;
+        border-radius: 4px;
+        padding: 4px 8px;
+        outline: none;
+      }
+
+      /* 聊天主体 */
+      #chat-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .message {
+        max-width: 70%;
+        padding: 8px 16px;
+        border-radius: 18px;
+        font-size: 14px;
+        line-height: 1.4;
+        position: relative;
+        word-wrap: break-word;
+      }
+
+      .message.user {
+        align-self: flex-end;
+        background-color: var(--msg-user);
+        color: var(--text-user);
+        border-bottom-right-radius: 4px;
+      }
+
+      .message.ai {
+        align-self: flex-start;
+        background-color: var(--msg-ai);
+        color: var(--text-ai);
+        border-bottom-left-radius: 4px;
+      }
+
+      /* 输入区域 */
+      .input-area {
+        background: #ffffff;
+        padding: 16px 20px;
+        border-top: 1px solid #d1d1d6;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      textarea {
+        width: 100%;
+        height: 60px;
+        border: 1px solid #d1d1d6;
+        border-radius: 8px;
+        padding: 10px;
+        resize: none;
+        box-sizing: border-box;
+        font-size: 14px;
+        outline: none;
+      }
+
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      button {
+        padding: 6px 16px;
+        border-radius: 6px;
+        border: none;
+        background: #007aff;
+        color: white;
+        font-weight: 500;
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+
+      button:active { opacity: 0.7; }
+      button#stream { background: #34c759; }
+
+      /* 隐藏滚动条但保持滚动 */
+      #chat-container::-webkit-scrollbar { width: 6px; }
+      #chat-container::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
     </style>
   </head>
   <body>
-    <h1>OpenClaw Web Demo</h1>
 
-    <p>Backend base URL (your Node server):</p>
-    <input id="base" style="width:100%" value="" placeholder="https://yourdomain.com" />
-
-    <p>API key (DEMO_API_KEY):</p>
-    <div class="row">
-      <input id="key" type="password" placeholder="paste your DEMO_API_KEY" />
-      <button id="save">Save</button>
+    <div class="config-bar">
+      <input id="base" placeholder="Backend URL" style="flex: 2;" />
+      <input id="key" type="password" placeholder="API Key" style="flex: 1;" />
+      <button id="save" style="font-size: 11px; padding: 2px 8px;">Update Settings</button>
     </div>
 
-    <p>Message:</p>
-    <textarea id="msg">你好，星期五</textarea>
-
-    <div class="row">
-      <button id="send">Send (HTTP)</button>
-      <button id="stream">Stream (SSE)</button>
+    <div id="chat-container">
+      <div class="message ai">你好，我是<b>贾维斯</b>。请确保上方配置正确后开始聊天。</div>
     </div>
 
-    <h3>Output</h3>
-    <pre id="out"></pre>
+    <div class="input-area">
+      <textarea id="msg" placeholder="输入消息..."></textarea>
+      <div class="actions">
+        <button id="send">发送 (HTTP)</button>
+        <button id="stream">流式传输 (SSE)</button>
+      </div>
+    </div>
 
     <script>
       const $ = (id) => document.getElementById(id);
-      const out = $('out');
+      const chatContainer = $('chat-container');
 
-      // persist in browser for convenience
+      // 恢复设置
       $('base').value = localStorage.getItem('base') || '';
       $('key').value = localStorage.getItem('key') || '';
 
       $('save').onclick = () => {
         localStorage.setItem('base', $('base').value.trim());
         localStorage.setItem('key', $('key').value.trim());
-        out.textContent = 'saved';
+        alert('配置已保存');
       };
 
-      function headers() {
-        return { 'content-type': 'application/json', 'authorization': `Bearer ${$('key').value.trim()}` };
+      function appendMessage(role, text) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${role}`;
+        msgDiv.innerText = text;
+        chatContainer.appendChild(msgDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        return msgDiv;
       }
 
+      function getHeaders() {
+        return { 
+          'content-type': 'application/json', 
+          'authorization': `Bearer ${$('key').value.trim()}` 
+        };
+      }
+
+      // 1. 普通发送 (只显示 reply 内容)
       $('send').onclick = async () => {
-        out.textContent = '';
+        const text = $('msg').value.trim();
+        if(!text) return;
+
+        appendMessage('user', text);
+        $('msg').value = '';
+
         const base = $('base').value.trim();
-        const r = await fetch(base + '/api/chat', {
-          method: 'POST',
-          headers: headers(),
-          body: JSON.stringify({ text: $('msg').value })
-        });
-        const j = await r.json().catch(() => ({}));
-        out.textContent = JSON.stringify({ status: r.status, body: j }, null, 2);
+        try {
+          const r = await fetch(base + '/api/chat', {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ text: text })
+          });
+          const j = await r.json();
+          // 核心修改：只显示 reply
+          appendMessage('ai', j.reply || "未收到有效回复");
+        } catch (e) {
+          appendMessage('ai', "错误: " + e.message);
+        }
       };
 
+      // 2. 流式发送
       $('stream').onclick = async () => {
-        out.textContent = '';
+        const text = $('msg').value.trim();
+        if(!text) return;
+
+        appendMessage('user', text);
+        $('msg').value = '';
+
         const base = $('base').value.trim();
-        const text = encodeURIComponent($('msg').value);
-        const r = await fetch(base + '/api/chat/stream?text=' + text, { headers: { 'authorization': `Bearer ${$('key').value.trim()}` } });
-        if (!r.ok) {
-          out.textContent = 'HTTP ' + r.status + ' ' + await r.text();
-          return;
-        }
-        const reader = r.body.getReader();
-        const dec = new TextDecoder();
-        let buf = '';
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          buf += dec.decode(value, { stream: true });
-          out.textContent = buf;
+        const urlText = encodeURIComponent(text);
+        
+        try {
+          const r = await fetch(`${base}/api/chat/stream?text=${urlText}`, { 
+            headers: { 'authorization': `Bearer ${$('key').value.trim()}` } 
+          });
+
+          if (!r.ok) {
+            appendMessage('ai', 'Error: ' + r.status);
+            return;
+          }
+
+          const aiMsgDiv = appendMessage('ai', '...');
+          const reader = r.body.getReader();
+          const dec = new TextDecoder();
+          let fullText = '';
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            const chunk = dec.decode(value, { stream: true });
+            fullText += chunk;
+            aiMsgDiv.innerText = fullText; // 实时更新内容
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+          }
+        } catch (e) {
+          appendMessage('ai', "流式连接失败: " + e.message);
         }
       };
     </script>
