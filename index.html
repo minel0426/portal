@@ -1,796 +1,90 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>secret</title>
-    
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/relativeTime.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenClaw Web Demo</title>
     <style>
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        :root {
-            --accent: #007AFF;
-            --glass: rgba(255, 255, 255, 0.95);
-            --shadow: 0 8px 30px rgba(0,0,0,0.12);
-            --danger: #FF3B30;
-        }
-        html, body { 
-            margin: 0; padding: 0; width: 100%; height: 100%; 
-            overflow: hidden; background: #f2f2f7; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            touch-action: none; overscroll-behavior: none; 
-        }
-        
-        #canvas-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-        .bg-grid { background-image: radial-gradient(#ccc 1px, transparent 1px); background-size: 20px 20px; background-color: #fff; }
-        .bg-white { background-color: #fff; }
-        .bg-dark { background-color: #222; }
-        .bg-transparent { 
-            background-color: #fff;
-            background-image: linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%, #eee), 
-                             linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%, #eee);
-            background-position: 0 0, 10px 10px; background-size: 20px 20px;
-        }
-
-        .top-bar { position: fixed; top: 0; left: 0; width: 100%; padding: 15px; display: flex; justify-content: space-between; z-index: 100; pointer-events: none; }
-        .top-btn { pointer-events: auto; background: var(--glass); padding: 8px 15px; border-radius: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: 600; color: #333; font-size: 14px; }
-
-        .toolbar { 
-            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); 
-            background: var(--glass); padding: 10px 15px; border-radius: 50px; 
-            display: flex; gap: 10px; align-items: center; box-shadow: var(--shadow); 
-            z-index: 100; backdrop-filter: blur(10px); width: max-content; max-width: 95%;
-        }
-        .tool-btn { flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%; border: none; background: transparent; font-size: 22px; color: #888; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
-        .tool-btn.active { background: #eef; color: var(--accent); transform: scale(1.05); }
-        .divider { width: 1px; height: 20px; background: #ccc; flex-shrink: 0; }
-
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.4); z-index: 200; display: none;
-            align-items: center; justify-content: center;
-            backdrop-filter: blur(5px); 
-        }
-        .modal-overlay.show { display: flex; }
-
-        .gallery-card {
-            background: #f2f2f7; width: 100%; height: 100%; 
-            display: flex; flex-direction: column; overflow: hidden;
-            animation: slideUp 0.3s;
-        }
-        @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
-
-        .gallery-head { padding: 15px; background: white; display: flex; justify-content: space-between; align-items: center; font-weight: bold; border-bottom: 1px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.02); z-index: 10; }
-        .gallery-body { flex: 1; overflow-y: auto; padding: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; align-content: start; }
-        
-        .art-item { background: white; padding: 5px; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer; position: relative; transition: transform 0.2s; }
-        .art-item:active { transform: scale(0.98); }
-        .art-img { width: 100%; aspect-ratio: 1; object-fit: cover; background: #eee; display: block; border: 1px solid #f0f0f0; }
-        .art-info-row { margin-top: 5px; display: flex; justify-content: flex-end; align-items: center; gap: 10px; color: #666; font-size: 11px; font-weight: 500; padding-right: 2px; }
-        .icon-pair { display: flex; align-items: center; gap: 3px; }
-        .art-like-badge { cursor: pointer; }
-
-        .detail-window { 
-            width: 85%; max-width: 450px; height: 80%; max-height: 700px;
-            background: #fff; border-radius: 20px; 
-            display: flex; flex-direction: column; overflow: hidden; 
-            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transition: all 0.3s ease; 
-        }
-        @keyframes popIn { from{opacity:0; transform:scale(0.9)} to{opacity:1; transform:scale(1)} }
-
-        .detail-window.expanded .detail-img-box { height: 0; flex: 0; display: none; }
-        .detail-window.expanded .detail-comments { height: 100%; flex: 1; border-top: none; }
-
-        .detail-img-box { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; background: #f8f8f8; transition: all 0.3s; }
-        .detail-img { max-width: 100%; max-height: 100%; object-fit: contain; transition: all 0.3s; }
-        .detail-img.fullscreen-active { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 9999; object-fit: contain; border-radius: 0; padding: 0; }
-        
-        .detail-comments { height: 40%; background: #fff; display: flex; flex-direction: column; border-top: 1px solid #eee; transition: all 0.3s; position: relative; }
-        
-        .comment-handle {
-            width: 100%; height: 20px; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; background: #fff; border-bottom: 1px solid #f9f9f9; flex-shrink: 0;
-        }
-        .comment-handle-bar { width: 40px; height: 4px; background: #e0e0e0; border-radius: 2px; }
-
-        .fullscreen-btn { position: absolute; bottom: 15px; right: 15px; background: rgba(0,0,0,0.6); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 10; }
-        .fullscreen-btn.fullscreen-mode { position: fixed; z-index: 10000; bottom: 30px; right: 30px; width: 40px; height: 40px; background: rgba(255,255,255,0.3); }
-
-        .cmt-list { flex: 1; overflow-y: auto; padding: 15px; }
-        .cmt-input-area { border-top: 1px solid #f5f5f5; background: #fff; display: flex; flex-direction: column; }
-        .cmt-preview { padding: 10px 15px 0; display: none; }
-        .preview-thumb { height: 60px; width: auto; border-radius: 8px; border: 1px solid #eee; position: relative; }
-        .preview-close { position: absolute; top: -8px; left: 55px; background: #ccc; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; }
-        .cmt-input-box { padding: 10px 15px; display: flex; gap: 10px; align-items: center; padding-bottom: 20px; }
-        .cmt-input { flex: 1; padding: 10px; border-radius: 18px; border: 1px solid #eee; outline: none; background: #f9f9f9; font-size: 14px; }
-        .cmt-icon-btn { font-size: 24px; color: #007AFF; cursor: pointer; display: flex; align-items: center; }
-        .cmt-content-img { display: block; max-width: 150px; max-height: 150px; border-radius: 8px; margin-top: 5px; border: 1px solid #eee; cursor: zoom-in; }
-
-        /* 新增：图片查看器样式 */
-        .image-viewer-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); z-index: 2000; display: none;
-            align-items: center; justify-content: center; cursor: zoom-out;
-            animation: fadeIn 0.2s;
-        }
-        .image-viewer-overlay.show { display: flex; }
-        .image-viewer-img { max-width: 100%; max-height: 100%; object-fit: contain; }
-        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
-
-        .ri-heart-fill { color: var(--danger) !important; animation: heartBeat 0.3s; }
-        @keyframes heartBeat { 0%{transform:scale(1)} 50%{transform:scale(1.3)} 100%{transform:scale(1)} }
-
-        .popover { position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%); background: white; padding: 15px; border-radius: 20px; box-shadow: var(--shadow); width: 260px; display: none; flex-direction: column; gap: 10px; z-index: 101; }
-        .popover.show { display: flex; }
-        .color-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
-        .color-preset { width: 36px; height: 36px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; }
-        .confirm-box { background: white; width: 80%; max-width: 300px; padding: 25px; border-radius: 20px; text-align: center; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 20px; }
-        .btn { border: none; padding: 10px; border-radius: 10px; font-weight: bold; cursor: pointer; flex: 1; }
-        .btn-ok { background: var(--accent); color: white; }
-        .toast { position: fixed; top: 50px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border-radius: 25px; font-size: 14px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
-        .toast.show { opacity: 1; }
-        .spinner { width: 30px; height: 30px; border: 3px solid #eee; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s infinite linear; margin: 40px auto; }
-        @keyframes spin { to {transform: rotate(360deg)} }
-
-        @media (max-width: 600px) {
-            .toolbar { width: 92%; overflow-x: auto; justify-content: space-between; gap: 5px; padding: 10px; }
-            .detail-window { width: 95%; height: 85%; }
-            .color-history { display: none !important; } 
-        }
+      body { font-family: system-ui, sans-serif; max-width: 900px; margin: 24px auto; padding: 0 16px; }
+      textarea { width: 100%; height: 90px; }
+      pre { background: #111; color: #eee; padding: 12px; overflow: auto; }
+      .row { display: flex; gap: 8px; align-items: center; }
+      input[type=password] { flex: 1; }
+      button { padding: 8px 12px; }
     </style>
-</head>
-<body>
+  </head>
+  <body>
+    <h1>OpenClaw Web Demo</h1>
 
-    <div id="canvas-wrapper" class="bg-grid"><canvas id="c"></canvas></div>
+    <p>Backend base URL (your Node server):</p>
+    <input id="base" style="width:100%" value="" placeholder="https://yourdomain.com" />
 
-    <div class="top-bar">
-        <div class="top-btn" onclick="openGallery()"><i class="ri-gallery-view-2"></i>所有作品</div>
-        <div class="top-btn" onclick="toggleBgMenu()"><i class="ri-magic-line"></i> 背景</div>
+    <p>API key (DEMO_API_KEY):</p>
+    <div class="row">
+      <input id="key" type="password" placeholder="paste your DEMO_API_KEY" />
+      <button id="save">Save</button>
     </div>
 
-    <input type="file" id="img-upload" hidden accept="image/*" onchange="handleImageUpload(this)">
-    <input type="file" id="cmt-img-upload" hidden accept="image/*" onchange="handleCommentImage(this)">
+    <p>Message:</p>
+    <textarea id="msg">你好，星期五</textarea>
 
-    <div class="toolbar">
-        <button class="tool-btn" onclick="undo()"><i class="ri-arrow-go-back-line"></i></button>
-        <button class="tool-btn" onclick="document.getElementById('img-upload').click()"><i class="ri-image-add-line"></i></button>
-        <button class="tool-btn" onclick="downloadImage()"><i class="ri-download-2-line"></i></button>
-        <div class="divider"></div>
-        <button class="tool-btn active" id="btn-pen" onclick="setTool('pen')"><i class="ri-pencil-fill"></i></button>
-        <button class="tool-btn" id="btn-eraser" onclick="setTool('eraser')"><i class="ri-eraser-fill"></i></button>
-        <input type="range" style="width: 50px" min="1" max="50" value="4" oninput="updateSize(this.value)">
-        <div class="divider"></div>
-        <div class="color-history" id="color-slots" style="display:flex;gap:6px"></div>
-        <div class="color-preset" id="current-color-btn" style="width:28px;height:28px;background:black;flex-shrink:0" onclick="toggleColorMenu()"></div>
-        <div class="divider"></div>
-        <button class="tool-btn" style="color:var(--accent)" onclick="prePublish()"><i class="ri-send-plane-fill"></i></button>
+    <div class="row">
+      <button id="send">Send (HTTP)</button>
+      <button id="stream">Stream (SSE)</button>
     </div>
 
-    <div class="popover" id="bg-menu" style="bottom: auto; top: 70px; right: 15px; left: auto; transform: none; width: 140px;">
-        <button class="btn" style="width:100%;margin-bottom:5px;background:#f2f2f7" onclick="setBg('grid')">网格纸</button>
-        <button class="btn" style="width:100%;margin-bottom:5px;background:#f2f2f7" onclick="setBg('white')">纯白</button>
-        <button class="btn" style="width:100%;margin-bottom:5px;background:#f2f2f7" onclick="setBg('dark')">深色模式</button>
-        <button class="btn" style="width:100%;background:#f2f2f7" onclick="setBg('transparent')">透明</button>
-    </div>
+    <h3>Output</h3>
+    <pre id="out"></pre>
 
-    <div class="popover" id="color-menu">
-        <div style="font-size:12px; color:#999; margin-bottom:5px">选择颜色</div>
-        <div class="color-grid">
-            <div class="color-preset" style="background:#000000" onclick="setColor('#000000')"></div>
-            <div class="color-preset" style="background:#FF3B30" onclick="setColor('#FF3B30')"></div>
-            <div class="color-preset" style="background:#FF9500" onclick="setColor('#FF9500')"></div>
-            <div class="color-preset" style="background:#FFCC00" onclick="setColor('#FFCC00')"></div>
-            <div class="color-preset" style="background:#34C759" onclick="setColor('#34C759')"></div>
-            <div class="color-preset" style="background:#007AFF" onclick="setColor('#007AFF')"></div>
-            <div class="color-preset" style="background:#5856D6" onclick="setColor('#5856D6')"></div>
-            <div class="color-preset" style="background:#AF52DE" onclick="setColor('#AF52DE')"></div>
-            <div class="color-preset" style="background:#8E8E93" onclick="setColor('#8E8E93')"></div>
-            <div class="color-preset" style="background:conic-gradient(red, violet, blue, lime, yellow, red)" onclick="document.getElementById('native-color-picker').click()"></div>
-        </div>
-        <input type="color" id="native-color-picker" style="opacity:0;position:absolute;pointer-events:none" onchange="setColor(this.value)">
-    </div>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const out = $('out');
 
-    <div class="modal-overlay" id="gallery-modal">
-        <div class="gallery-card">
-            <div class="gallery-head">
-                <span>所有作品</span>
-                <i class="ri-close-circle-fill" style="font-size:28px; color:#999; cursor:pointer" onclick="closeModal('gallery-modal')"></i>
-            </div>
-            <div class="gallery-body" id="gallery-list"></div>
-        </div>
-    </div>
+      // persist in browser for convenience
+      $('base').value = localStorage.getItem('base') || '';
+      $('key').value = localStorage.getItem('key') || '';
 
-    <div class="modal-overlay" id="detail-modal" onclick="closeModal('detail-modal')">
-        <div class="detail-window" id="detail-win" onclick="event.stopPropagation()">
-            <div class="detail-img-box" id="detail-box">
-                <img id="detail-img" class="detail-img">
-                <div id="fs-btn" class="fullscreen-btn" onclick="toggleDetailFullscreen()"><i class="ri-fullscreen-line"></i></div>
-            </div>
-            
-            <div class="detail-comments">
-                <div class="comment-handle" onclick="toggleCommentExpand()">
-                    <div class="comment-handle-bar"></div>
-                </div>
+      $('save').onclick = () => {
+        localStorage.setItem('base', $('base').value.trim());
+        localStorage.setItem('key', $('key').value.trim());
+        out.textContent = 'saved';
+      };
 
-                <div class="gallery-head" style="border-bottom:1px solid #eee; padding:5px 15px; font-size:14px; border-top:none;">
-                    <div style="display:flex; align-items:center; gap:8px">
-                        <span id="detail-author">匿名</span>
-                    </div>
-                    <div id="detail-like-btn" onclick="likeCurrentDetail()" style="display:flex; align-items:center; gap:5px; color:#666; cursor:pointer">
-                        <i class="ri-heart-line" style="font-size:20px"></i>
-                        <span style="font-size:14px">0</span>
-                    </div>
-                </div>
+      function headers() {
+        return { 'content-type': 'application/json', 'authorization': `Bearer ${$('key').value.trim()}` };
+      }
 
-                <div class="cmt-list" id="cmt-list"></div>
-                
-                <div class="cmt-input-area">
-                    <div class="cmt-preview" id="cmt-preview">
-                        <div style="position:relative; display:inline-block">
-                            <img id="cmt-preview-img" class="preview-thumb">
-                            <div class="preview-close" onclick="clearCommentImage()"><i class="ri-close-line"></i></div>
-                        </div>
-                    </div>
-                    <div class="cmt-input-box">
-                        <div class="cmt-icon-btn" onclick="document.getElementById('cmt-img-upload').click()">
-                            <i class="ri-image-add-line"></i>
-                        </div>
-                        <input class="cmt-input" id="cmt-input" placeholder="写下你的想法...">
-                        <button style="border:none; background:var(--accent); color:white; padding:0 15px; height: 38px; border-radius:15px; font-weight:bold; font-size:13px" onclick="postComment()">发送</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="image-viewer-overlay" id="image-viewer" onclick="closeImageViewer()">
-        <img class="image-viewer-img" id="viewer-img">
-    </div>
-
-    <div class="modal-overlay" id="confirm-modal">
-        <div class="confirm-box">
-            <h3 id="confirm-title" style="margin:0">确认发布</h3>
-            <div id="confirm-text" style="color:#666">内容</div>
-            <div style="display:flex; gap:10px">
-                <button class="btn" style="background:#f2f2f7;color:#333" onclick="closeModal('confirm-modal')">取消</button>
-                <button class="btn btn-ok" id="confirm-ok-btn">确定</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="name-modal">
-        <div class="confirm-box">
-            <h3>署名</h3>
-            <input class="cmt-input" id="nickname-input" placeholder="请输入你的昵称" style="text-align:center">
-            <button class="btn btn-ok" onclick="confirmPublish()">确认发布</button>
-        </div>
-    </div>
-
-    <div id="toast" class="toast">提示信息</div>
-
-<script>
-    dayjs.extend(window.dayjs_plugin_relativeTime);
-
-    const SUPABASE_URL = 'https://hahqzlwuiztbxavfkong.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_uiMb3H75fAlmgSnFBYdYnQ_mSh16evc';
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    let canvas;
-    let currentTool = 'pen';
-    let brushSize = 4;
-    let brushColor = '#000000'; 
-    let historyColors = ['#000000', '#FF3B30', '#007AFF']; 
-    let historySteps = []; 
-    let bgType = 'grid'; 
-    let currentDetailId = null;
-    let currentCommentImgBase64 = null;
-
-    function showToast(msg) {
-        const t = document.getElementById('toast');
-        t.innerText = msg;
-        t.classList.add('show');
-        setTimeout(() => t.classList.remove('show'), 2000);
-    }
-
-    function showConfirm(text, onOk) {
-        const m = document.getElementById('confirm-modal');
-        document.getElementById('confirm-text').innerText = text;
-        const btn = document.getElementById('confirm-ok-btn');
-        const newBtn = btn.cloneNode(true);
-        btn.parentNode.replaceChild(newBtn, btn);
-        newBtn.onclick = () => { closeModal('confirm-modal'); onOk(); };
-        m.classList.add('show');
-    }
-
-    window.onload = () => {
-        initCanvas();
-        renderColorHistory();
-    };
-
-    function initCanvas() {
-        canvas = new fabric.Canvas('c', { isDrawingMode: true, selection: false, preserveObjectStacking: true });
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-        
-        canvas.on('path:created', (opt) => {
-            historySteps.push(JSON.stringify(canvas)); 
-            if (currentTool === 'eraser') {
-                opt.path.globalCompositeOperation = 'destination-out';
-                opt.path.stroke = 'white'; 
-                canvas.renderAll();
-            }
+      $('send').onclick = async () => {
+        out.textContent = '';
+        const base = $('base').value.trim();
+        const r = await fetch(base + '/api/chat', {
+          method: 'POST',
+          headers: headers(),
+          body: JSON.stringify({ text: $('msg').value })
         });
-        historySteps.push(JSON.stringify(canvas));
-        setupBrush();
-    }
+        const j = await r.json().catch(() => ({}));
+        out.textContent = JSON.stringify({ status: r.status, body: j }, null, 2);
+      };
 
-    function resizeCanvas() {
-        canvas.setWidth(window.innerWidth);
-        canvas.setHeight(window.innerHeight);
-    }
-
-    function setupBrush() {
-        canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-        if (currentTool === 'pen') {
-            canvas.freeDrawingBrush.width = parseInt(brushSize);
-            canvas.freeDrawingBrush.color = brushColor;
-        } else {
-            canvas.freeDrawingBrush.width = parseInt(brushSize) * 4; 
-            canvas.freeDrawingBrush.color = 'rgba(255, 255, 255, 1)'; 
+      $('stream').onclick = async () => {
+        out.textContent = '';
+        const base = $('base').value.trim();
+        const text = encodeURIComponent($('msg').value);
+        const r = await fetch(base + '/api/chat/stream?text=' + text, { headers: { 'authorization': `Bearer ${$('key').value.trim()}` } });
+        if (!r.ok) {
+          out.textContent = 'HTTP ' + r.status + ' ' + await r.text();
+          return;
         }
-    }
-
-    function setTool(tool) {
-        currentTool = tool;
-        canvas.isDrawingMode = true;
-        canvas.discardActiveObject(); 
-        canvas.requestRenderAll();
-        
-        document.getElementById('btn-pen').className = tool === 'tool-btn ' + (tool==='pen'?'active':'');
-        document.getElementById('btn-eraser').className = tool === 'tool-btn ' + (tool==='eraser'?'active':'');
-        if (tool === 'pen') document.getElementById('color-menu').classList.remove('show');
-        setupBrush();
-    }
-
-    function updateSize(val) { brushSize = val; setupBrush(); }
-    
-    function undo() {
-        if (historySteps.length > 1) {
-            historySteps.pop();
-            const lastState = historySteps[historySteps.length - 1];
-            canvas.clear();
-            canvas.loadFromJSON(lastState, () => {
-                canvas.renderAll();
-                canvas.isDrawingMode = true; 
-                setTool(currentTool);
-            });
-        } else showToast('没有更多步骤了');
-    }
-
-    function downloadImage() {
-        if (canvas.getObjects().length === 0) return showToast('画布是空的');
-        const dataURL = canvas.toDataURL({ format: 'png', multiplier: 2 });
-        const link = document.createElement('a');
-        link.download = 'iCanvas_' + Date.now() + '.png';
-        link.href = dataURL;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        showToast('已保存');
-    }
-
-    function handleImageUpload(input) {
-        const file = input.files[0];
-        if(!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = (f) => {
-            fabric.Image.fromURL(f.target.result, (img) => {
-                const scale = Math.min(
-                    (canvas.width * 0.8) / img.width, 
-                    (canvas.height * 0.8) / img.height
-                );
-                img.scale(scale);
-                canvas.add(img);
-                canvas.centerObject(img);
-                canvas.setActiveObject(img);
-                
-                canvas.isDrawingMode = false;
-                document.getElementById('btn-pen').classList.remove('active');
-                document.getElementById('btn-eraser').classList.remove('active');
-
-                showToast('已切换至选择模式，可移动图片。绘画请点击底部画笔');
-                historySteps.push(JSON.stringify(canvas));
-                input.value = '';
-            });
-        };
-        reader.readAsDataURL(file);
-    }
-
-    function compressImage(file, callback) {
-        if (file.size <= 1024 * 1024) {
-            const reader = new FileReader();
-            reader.onload = (e) => callback(e.target.result);
-            reader.readAsDataURL(file);
-            return;
+        const reader = r.body.getReader();
+        const dec = new TextDecoder();
+        let buf = '';
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          out.textContent = buf;
         }
-
-        showToast('图片较大，正在压缩...');
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                let width = img.width;
-                let height = img.height;
-                const maxDim = 1280; 
-
-                if (width > height) {
-                    if (width > maxDim) {
-                        height *= maxDim / width;
-                        width = maxDim;
-                    }
-                } else {
-                    if (height > maxDim) {
-                        width *= maxDim / height;
-                        height = maxDim;
-                    }
-                }
-                
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                callback(dataUrl);
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    }
-
-    function handleCommentImage(input) {
-        const file = input.files[0];
-        if(!file) return;
-        
-        compressImage(file, (base64) => {
-            currentCommentImgBase64 = base64;
-            const previewBox = document.getElementById('cmt-preview');
-            const previewImg = document.getElementById('cmt-preview-img');
-            previewImg.src = currentCommentImgBase64;
-            previewBox.style.display = 'block';
-        });
-        
-        input.value = '';
-    }
-    
-    function clearCommentImage() {
-        currentCommentImgBase64 = null;
-        document.getElementById('cmt-preview').style.display = 'none';
-        document.getElementById('cmt-img-upload').value = '';
-    }
-
-    function toggleCommentExpand() {
-        const win = document.getElementById('detail-win');
-        win.classList.toggle('expanded');
-    }
-
-    function toggleColorMenu() {
-        document.getElementById('color-menu').classList.toggle('show');
-        document.getElementById('bg-menu').classList.remove('show');
-    }
-    function setColor(color) {
-        brushColor = color;
-        document.getElementById('current-color-btn').style.background = color;
-        setTool('pen');
-        addToHistory(color);
-        document.getElementById('color-menu').classList.remove('show');
-    }
-    function addToHistory(color) {
-        if (!historyColors.includes(color)) {
-            historyColors.unshift(color);
-            if (historyColors.length > 3) historyColors.pop();
-            renderColorHistory();
-        }
-    }
-    function renderColorHistory() {
-        const wrap = document.getElementById('color-slots');
-        wrap.innerHTML = '';
-        historyColors.forEach(c => {
-            const dot = document.createElement('div');
-            dot.className = 'color-preset';
-            dot.style.width='28px'; dot.style.height='28px';
-            dot.style.backgroundColor = c;
-            if (c === brushColor && currentTool === 'pen') dot.style.borderColor = '#666';
-            dot.onclick = () => setColor(c);
-            wrap.appendChild(dot);
-        });
-    }
-
-    function toggleBgMenu() {
-        document.getElementById('bg-menu').classList.toggle('show');
-        document.getElementById('color-menu').classList.remove('show');
-    }
-    function setBg(type) {
-        bgType = type;
-        const wrap = document.getElementById('canvas-wrapper');
-        wrap.className = type !== 'transparent' ? 'bg-'+type : 'bg-transparent';
-        document.getElementById('bg-menu').classList.remove('show');
-        showToast('背景已切换');
-    }
-
-    function prePublish() {
-        if (canvas.getObjects().length === 0) return showToast('画布是空的');
-        const name = localStorage.getItem('nickname');
-        if (!name) document.getElementById('name-modal').classList.add('show');
-        else showConfirm('确定要发布你的作品吗？', () => doUpload(name));
-    }
-    function confirmPublish() {
-        const name = document.getElementById('nickname-input').value.trim();
-        if (!name) return showToast('请输入昵称');
-        localStorage.setItem('nickname', name);
-        document.getElementById('name-modal').classList.remove('show');
-        doUpload(name);
-    }
-    async function doUpload(nickname) {
-        const btn = document.querySelector('.ri-send-plane-fill').parentNode;
-        const originalHtml = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;margin:0;border-width:2px"></div>';
-        try {
-            const dataURL = canvas.toDataURL({ format: 'png', multiplier: 1 });
-            const { error } = await _supabase.from('comments').insert({
-                nickname: nickname, content: dataURL, type: 'doodle', bg_style: bgType, likes: 0, comment_count: 0
-            });
-            if (error) throw error;
-            showToast('发布成功！');
-            canvas.clear();
-            historySteps = [JSON.stringify(canvas)];
-            
-            canvas.isDrawingMode = true;
-            setTool('pen');
-            
-            openGallery(); 
-        } catch (e) {
-            showToast('发布失败: ' + e.message);
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = originalHtml;
-        }
-    }
-
-    function getLikedIds() {
-        const ids = JSON.parse(localStorage.getItem('liked_ids') || '[]');
-        return ids.map(String);
-    }
-
-    async function openGallery() {
-        const modal = document.getElementById('gallery-modal');
-        const list = document.getElementById('gallery-list');
-        modal.classList.add('show');
-        
-        list.innerHTML = '<div style="grid-column: 1 / -1; display: flex; justify-content: center; align-items: center; height: 100%; min-height: 200px;"><div class="spinner" style="margin:0"></div></div>';
-        
-        try {
-            const { data, error } = await _supabase.from('comments').select('*').order('created_at', { ascending: false }).limit(50);
-            if (error) throw error;
-
-            list.innerHTML = '';
-            const likedIds = getLikedIds();
-
-            data.forEach(item => {
-                const strId = String(item.id);
-                const isLiked = likedIds.includes(strId);
-                const div = document.createElement('div');
-                div.className = 'art-item'; 
-                const bgClass = item.bg_style ? 'bg-'+item.bg_style : 'bg-grid';
-                
-                div.innerHTML = `
-                    <div style="position:relative">
-                        <img src="${item.content}" class="art-img ${bgClass}">
-                    </div>
-                    <div class="art-info-row">
-                        <div class="icon-pair">
-                            <i class="ri-chat-3-line"></i>
-                            <span>${item.comment_count || 0}</span>
-                        </div>
-                        <div class="art-like-badge icon-pair" id="like-badge-${strId}" onclick="like(event, '${strId}', this)">
-                            <i class="ri-heart-${item.liked || isLiked ? 'fill' : 'line'}" style="${item.liked || isLiked ? 'color:var(--danger)' : ''}"></i>
-                            <span>${item.likes||0}</span>
-                        </div>
-                    </div>
-                `;
-                div.onclick = (e) => {
-                    if(!e.target.closest('.art-like-badge')) openDetail(item);
-                };
-                list.appendChild(div);
-            });
-        } catch (e) {
-            list.innerHTML = `<div style="text-align:center;width:100%;grid-column:span 2">加载失败</div>`;
-        }
-    }
-
-    async function like(e, id, el) {
-        e.stopPropagation(); 
-        const strId = String(id);
-        
-        let likedIds = getLikedIds();
-        const isLiked = likedIds.includes(strId);
-        
-        let newIsLiked = !isLiked;
-        let diff = newIsLiked ? 1 : -1;
-        
-        if (newIsLiked) {
-            likedIds.push(strId);
-        } else {
-            likedIds = likedIds.filter(lid => lid !== strId);
-        }
-        localStorage.setItem('liked_ids', JSON.stringify(likedIds));
-
-        updateLikeUI(strId, newIsLiked, diff);
-
-        if (!newIsLiked) {
-            const { data } = await _supabase.from('comments').select('likes').eq('id', strId).single();
-            if (data && data.likes > 0) {
-                await _supabase.from('comments').update({ likes: data.likes - 1 }).eq('id', strId);
-            }
-        } else {
-            const { error } = await _supabase.rpc('increment_likes', { row_id: strId });
-            if (error) {
-                const { data } = await _supabase.from('comments').select('likes').eq('id', strId).single();
-                if (data) {
-                    await _supabase.from('comments').update({ likes: data.likes + 1 }).eq('id', strId);
-                }
-            }
-        }
-    }
-
-    function updateLikeUI(id, isLiked, diff) {
-        const updateElement = (el) => {
-            if (!el) return;
-            const icon = el.querySelector('i');
-            const countSpan = el.querySelector('span');
-            
-            icon.className = isLiked ? 'ri-heart-fill' : 'ri-heart-line';
-            icon.style.color = isLiked ? 'var(--danger)' : '';
-            
-            let currentCount = parseInt(countSpan.innerText);
-            countSpan.innerText = Math.max(0, currentCount + diff);
-        };
-
-        const listBadge = document.getElementById('like-badge-' + id);
-        if (listBadge) updateElement(listBadge);
-
-        if (currentDetailId && String(currentDetailId) === String(id)) {
-            const detailBtn = document.getElementById('detail-like-btn');
-            updateElement(detailBtn);
-        }
-    }
-
-    async function openDetail(item) {
-        currentDetailId = item.id;
-        document.getElementById('detail-modal').classList.add('show');
-        
-        document.getElementById('detail-img').classList.remove('fullscreen-active');
-        document.getElementById('fs-btn').classList.remove('fullscreen-mode');
-        document.getElementById('fs-btn').querySelector('i').className = 'ri-fullscreen-line';
-        document.getElementById('detail-win').classList.remove('expanded');
-
-        const img = document.getElementById('detail-img');
-        img.src = item.content;
-        
-        const box = document.getElementById('detail-box');
-        box.className = 'detail-img-box ' + (item.bg_style ? 'bg-'+item.bg_style : 'bg-grid');
-        
-        document.getElementById('detail-author').innerText = item.nickname || '匿名';
-        
-        const strId = String(item.id);
-        const likedIds = getLikedIds();
-        const isLiked = likedIds.includes(strId);
-        const likeBtn = document.getElementById('detail-like-btn');
-        likeBtn.innerHTML = `
-            <i class="ri-heart-${isLiked ? 'fill' : 'line'}" style="font-size:20px; ${isLiked?'color:var(--danger)':''}"></i>
-            <span style="font-size:14px">${item.likes||0}</span>
-        `;
-        
-        loadComments(item.id);
-
-        const { data } = await _supabase.from('comments').select('likes').eq('id', item.id).single();
-        if (data) {
-            const currentLiked = getLikedIds().includes(strId);
-            likeBtn.innerHTML = `
-                <i class="ri-heart-${currentLiked ? 'fill' : 'line'}" style="font-size:20px; ${currentLiked?'color:var(--danger)':''}"></i>
-                <span style="font-size:14px">${data.likes}</span>
-            `;
-            const listBadge = document.getElementById('like-badge-' + strId);
-            if(listBadge) {
-                listBadge.querySelector('span').innerText = data.likes;
-            }
-        }
-    }
-
-    function likeCurrentDetail() {
-        const btn = document.getElementById('detail-like-btn');
-        like({ stopPropagation: ()=>{} }, currentDetailId, btn);
-    }
-
-    function toggleDetailFullscreen() {
-        const img = document.getElementById('detail-img');
-        const btn = document.getElementById('fs-btn');
-        const icon = btn.querySelector('i');
-        
-        const isFull = img.classList.toggle('fullscreen-active');
-        btn.classList.toggle('fullscreen-mode');
-        
-        icon.className = isFull ? 'ri-fullscreen-exit-line' : 'ri-fullscreen-line';
-    }
-
-    async function loadComments(pid) {
-        const list = document.getElementById('cmt-list');
-        list.innerHTML = '<div style="text-align:center;color:#999;margin-top:20px">...</div>';
-        const { data } = await _supabase.from('sub_comments').select('*').eq('parent_id', pid).order('created_at', { ascending: true });
-        list.innerHTML = '';
-        if (data && data.length > 0) {
-            data.forEach(c => {
-                const imgHtml = c.img_content ? `<img src="${c.img_content}" class="cmt-content-img" onclick="viewImage(this.src)">` : '';
-                
-                list.innerHTML += `
-                    <div style="margin-bottom:12px;">
-                        <div style="font-size:12px; font-weight:bold; color:#333">${c.nickname} <span style="color:#bbb;font-weight:normal">${dayjs(c.created_at).format('YYYY-MM-DD HH:mm')}</span></div>
-                        <div style="font-size:13px; color:#555; margin-top:2px; background:#f2f2f7; padding:6px 10px; border-radius:10px; display:inline-block">
-                            ${c.content}
-                            ${imgHtml}
-                        </div>
-                    </div>`;
-            });
-            list.scrollTop = list.scrollHeight;
-        } else list.innerHTML = '<div style="text-align:center; color:#ccc; margin-top:30px; font-size:12px">暂无评论</div>';
-    }
-
-    function viewImage(src) {
-        const viewer = document.getElementById('image-viewer');
-        const img = document.getElementById('viewer-img');
-        img.src = src;
-        viewer.classList.add('show');
-    }
-    function closeImageViewer() {
-        document.getElementById('image-viewer').classList.remove('show');
-    }
-
-    async function postComment() {
-        const input = document.getElementById('cmt-input');
-        const txt = input.value.trim();
-        
-        if (!txt && !currentCommentImgBase64) return showToast('内容不能为空');
-        
-        let name = localStorage.getItem('nickname') || '匿名';
-        
-        const payload = { 
-            parent_id: currentDetailId, 
-            nickname: name, 
-            content: txt,
-            img_content: currentCommentImgBase64 
-        };
-
-        const { error } = await _supabase.from('sub_comments').insert(payload);
-        if (error) showToast('评论失败');
-        else { 
-            input.value = ''; 
-            clearCommentImage(); 
-            loadComments(currentDetailId); 
-            showToast('已发送'); 
-        }
-    }
-
-    function closeModal(id) { document.getElementById(id).classList.remove('show'); }
-</script>
-</body>
+      };
+    </script>
+  </body>
 </html>
