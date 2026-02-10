@@ -1,237 +1,433 @@
 <!doctype html>
-<html lang="zh-CN">
-  <head>
+<html lang="zh-CN" data-theme="light">
+<head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Jarvis - OpenClaw Web</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>Jarvis</title>
     <style>
-      :root {
-        --bg-color: #f5f5f7;
-        --msg-user: #007aff;
-        --msg-ai: #e9e9eb;
-        --text-user: #ffffff;
-        --text-ai: #000000;
-      }
+        :root {
+            /* 浅色模式变量 */
+            --bg-body: #ffffff;
+            --bg-nav: rgba(245, 245, 245, 0.85);
+            --bg-input: #f2f2f7;
+            --border-color: #d1d1d6;
+            --msg-user-bg: #007aff;
+            --msg-user-text: #ffffff;
+            --msg-ai-bg: #e9e9eb;
+            --msg-ai-text: #000000;
+            --text-primary: #000000;
+            --text-secondary: #8e8e93;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            --input-area-bg: rgba(255, 255, 255, 0.95);
+        }
 
-      body { 
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-        background-color: var(--bg-color);
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-      }
+        [data-theme="dark"] {
+            /* 深色模式变量 */
+            --bg-body: #000000;
+            --bg-nav: rgba(30, 30, 30, 0.85);
+            --bg-input: #1c1c1e;
+            --border-color: #38383a;
+            --msg-user-bg: #0a84ff;
+            --msg-user-text: #ffffff;
+            --msg-ai-bg: #262628;
+            --msg-ai-text: #ffffff;
+            --text-primary: #ffffff;
+            --text-secondary: #98989d;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            --input-area-bg: rgba(30, 30, 30, 0.95);
+        }
 
-      /* 配置栏 - 紧凑型 */
-      .config-bar {
-        background: rgba(255, 255, 255, 0.8);
-        backdrop-filter: blur(10px);
-        padding: 10px 20px;
-        border-bottom: 1px solid #d1d1d6;
-        display: flex;
-        gap: 10px;
-        font-size: 12px;
-      }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh; /* 移动端动态高度 */
+            overflow: hidden;
+            transition: background-color 0.3s ease;
+        }
 
-      .config-bar input {
-        border: 1px solid #d1d1d6;
-        border-radius: 4px;
-        padding: 4px 8px;
-        outline: none;
-      }
+        /* 顶部导航 */
+        header {
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            background: var(--bg-nav);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 100;
+            flex-shrink: 0;
+        }
 
-      /* 聊天主体 */
-      #chat-container {
-        flex: 1;
-        overflow-y: auto;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
+        h1 { font-size: 17px; font-weight: 600; margin: 0; }
 
-      .message {
-        max-width: 70%;
-        padding: 8px 16px;
-        border-radius: 18px;
-        font-size: 14px;
-        line-height: 1.4;
-        position: relative;
-        word-wrap: break-word;
-      }
+        .header-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            color: var(--msg-user-bg);
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .header-btn svg { width: 20px; height: 20px; fill: currentColor; }
 
-      .message.user {
-        align-self: flex-end;
-        background-color: var(--msg-user);
-        color: var(--text-user);
-        border-bottom-right-radius: 4px;
-      }
+        /* 设置面板 */
+        #settings-panel {
+            background: var(--bg-body);
+            padding: 0 20px;
+            max-height: 0;
+            overflow: hidden;
+            border-bottom: 1px solid transparent;
+            transition: max-height 0.3s ease, padding 0.3s ease, border-color 0.3s ease;
+        }
 
-      .message.ai {
-        align-self: flex-start;
-        background-color: var(--msg-ai);
-        color: var(--text-ai);
-        border-bottom-left-radius: 4px;
-      }
+        #settings-panel.open {
+            padding: 20px;
+            max-height: 200px;
+            border-bottom-color: var(--border-color);
+        }
 
-      /* 输入区域 */
-      .input-area {
-        background: #ffffff;
-        padding: 16px 20px;
-        border-top: 1px solid #d1d1d6;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
+        .input-group { margin-bottom: 12px; }
+        .input-group label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+        .settings-input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+        }
+        
+        .save-btn {
+            width: 100%;
+            padding: 10px;
+            background: var(--msg-user-bg);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+        }
 
-      textarea {
-        width: 100%;
-        height: 60px;
-        border: 1px solid #d1d1d6;
-        border-radius: 8px;
-        padding: 10px;
-        resize: none;
-        box-sizing: border-box;
-        font-size: 14px;
-        outline: none;
-      }
+        /* 聊天区域 */
+        #chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            scroll-behavior: smooth;
+        }
 
-      .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-      }
+        .message {
+            max-width: 80%;
+            padding: 10px 16px;
+            border-radius: 18px;
+            font-size: 16px;
+            line-height: 1.4;
+            position: relative;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease;
+        }
 
-      button {
-        padding: 6px 16px;
-        border-radius: 6px;
-        border: none;
-        background: #007aff;
-        color: white;
-        font-weight: 500;
-        cursor: pointer;
-        transition: opacity 0.2s;
-      }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-      button:active { opacity: 0.7; }
-      button#stream { background: #34c759; }
+        .message.user {
+            align-self: flex-end;
+            background-color: var(--msg-user-bg);
+            color: var(--msg-user-text);
+            border-bottom-right-radius: 4px;
+        }
 
-      /* 隐藏滚动条但保持滚动 */
-      #chat-container::-webkit-scrollbar { width: 6px; }
-      #chat-container::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+        .message.ai {
+            align-self: flex-start;
+            background-color: var(--msg-ai-bg);
+            color: var(--msg-ai-text);
+            border-bottom-left-radius: 4px;
+        }
+        
+        .message strong { font-weight: 600; }
+
+        /* Loading 气泡效果 */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 12px 16px;
+            min-width: 60px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--text-secondary);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+            opacity: 0.6;
+        }
+
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* 底部输入区 */
+        .input-area {
+            background: var(--input-area-bg);
+            padding: 12px 16px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding-bottom: max(12px, env(safe-area-inset-bottom)); /* 适配 iPhone 底部黑条 */
+        }
+
+        textarea {
+            flex: 1;
+            min-height: 40px;
+            max-height: 120px;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 10px 14px;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 16px;
+            outline: none;
+            resize: none;
+            font-family: inherit;
+        }
+
+        textarea:focus { border-color: var(--msg-user-bg); }
+
+        .send-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--msg-user-bg);
+            border: none;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: transform 0.1s;
+        }
+
+        .send-btn:active { transform: scale(0.9); }
+        .send-btn svg { width: 20px; height: 20px; fill: white; transform: translateX(2px); }
+        .send-btn:disabled { background: var(--border-color); cursor: not-allowed; }
+
     </style>
-  </head>
-  <body>
+</head>
+<body>
 
-    <div class="config-bar">
-      <input id="base" placeholder="Backend URL" style="flex: 2;" />
-      <input id="key" type="password" placeholder="API Key" style="flex: 1;" />
-      <button id="save" style="font-size: 11px; padding: 2px 8px;">Update Settings</button>
+    <header>
+        <button class="header-btn" id="toggle-settings" aria-label="Settings">
+            <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+        </button>
+        <h1>Jarvis</h1>
+        <button class="header-btn" id="toggle-theme" aria-label="Theme">
+            <svg id="theme-icon" viewBox="0 0 24 24"><path d="M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36c-0.98,1.37-2.58,2.26-4.4,2.26 c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg>
+        </button>
+    </header>
+
+    <div id="settings-panel">
+        <div class="input-group">
+            <label>Backend URL</label>
+            <input id="base-url" class="settings-input" placeholder="e.g. http://192.168.1.5:8000" />
+        </div>
+        <div class="input-group">
+            <label>API Key</label>
+            <input id="api-key" type="password" class="settings-input" placeholder="Secret Key" />
+        </div>
+        <button id="save-config" class="save-btn">保存配置</button>
     </div>
 
     <div id="chat-container">
-      <div class="message ai">你好，我是<b>贾维斯</b>。请确保上方配置正确后开始聊天。</div>
+        <div class="message ai">你好，我是 <b>Jarvis</b>。</div>
     </div>
 
     <div class="input-area">
-      <textarea id="msg" placeholder="输入消息..."></textarea>
-      <div class="actions">
-        <button id="send">发送 (HTTP)</button>
-        <button id="stream">流式传输 (SSE)</button>
-      </div>
+        <textarea id="msg-input" placeholder="输入消息..." rows="1"></textarea>
+        <button id="send-btn" class="send-btn">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
     </div>
 
     <script>
-      const $ = (id) => document.getElementById(id);
-      const chatContainer = $('chat-container');
+        const $ = (id) => document.getElementById(id);
+        const chatContainer = $('chat-container');
+        const settingsPanel = $('settings-panel');
+        const msgInput = $('msg-input');
+        const sendBtn = $('send-btn');
+        const html = document.documentElement;
 
-      // 恢复设置
-      $('base').value = localStorage.getItem('base') || '';
-      $('key').value = localStorage.getItem('key') || '';
-
-      $('save').onclick = () => {
-        localStorage.setItem('base', $('base').value.trim());
-        localStorage.setItem('key', $('key').value.trim());
-        alert('配置已保存');
-      };
-
-      function appendMessage(role, text) {
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `message ${role}`;
-        msgDiv.innerText = text;
-        chatContainer.appendChild(msgDiv);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-        return msgDiv;
-      }
-
-      function getHeaders() {
-        return { 
-          'content-type': 'application/json', 
-          'authorization': `Bearer ${$('key').value.trim()}` 
+        // --- 初始化配置 ---
+        const CONFIG = {
+            base: localStorage.getItem('base') || '',
+            key: localStorage.getItem('key') || '',
+            theme: localStorage.getItem('theme') || 'light'
         };
-      }
 
-      // 1. 普通发送 (只显示 reply 内容)
-      $('send').onclick = async () => {
-        const text = $('msg').value.trim();
-        if(!text) return;
+        // 填充 Input
+        $('base-url').value = CONFIG.base;
+        $('api-key').value = CONFIG.key;
+        setTheme(CONFIG.theme);
 
-        appendMessage('user', text);
-        $('msg').value = '';
+        // --- 事件监听 ---
 
-        const base = $('base').value.trim();
-        try {
-          const r = await fetch(base + '/api/chat', {
-            method: 'POST',
-            headers: getHeaders(),
-            body: JSON.stringify({ text: text })
-          });
-          const j = await r.json();
-          // 核心修改：只显示 reply
-          appendMessage('ai', j.reply || "未收到有效回复");
-        } catch (e) {
-          appendMessage('ai', "错误: " + e.message);
+        // 1. 设置面板切换
+        $('toggle-settings').onclick = () => {
+            settingsPanel.classList.toggle('open');
+        };
+
+        // 2. 皮肤切换
+        $('toggle-theme').onclick = () => {
+            const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            setTheme(newTheme);
+        };
+
+        // 3. 保存配置
+        $('save-config').onclick = () => {
+            const base = $('base-url').value.trim();
+            const key = $('api-key').value.trim();
+            localStorage.setItem('base', base);
+            localStorage.setItem('key', key);
+            CONFIG.base = base;
+            CONFIG.key = key;
+            settingsPanel.classList.remove('open'); // 保存后自动收起
+            alert('配置已更新');
+        };
+
+        // 4. 输入框自动高度
+        msgInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            if(this.value === '') this.style.height = 'auto'; // Reset
+        });
+
+        // 5. 发送消息
+        sendBtn.onclick = handleSend;
+
+        // 监听 Enter 发送 (移动端通常换行，PC端Enter发送，Shift+Enter换行)
+        msgInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey && window.innerWidth > 768) {
+                e.preventDefault();
+                handleSend();
+            }
+        });
+
+        // --- 核心逻辑 ---
+
+        function setTheme(theme) {
+            html.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            // 简单的图标切换逻辑
+            const path = $('theme-icon').querySelector('path');
+            if(theme === 'dark') {
+                // Moon icon path (keep current)
+                path.setAttribute('d', 'M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36c-0.98,1.37-2.58,2.26-4.4,2.26 c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z');
+            } else {
+                // Sun icon path
+                path.setAttribute('d', 'M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.79 1.41-1.41-1.79-1.79-1.41 1.41zM20 10.5v2h3v-2h-3zm-8 2.5c-2.48 0-4.5-2.02-4.5-4.5S9.52 4 12 4s4.5 2.02 4.5 4.5-2.02 4.5-4.5 4.5zm-5.05 3.75l-1.79 1.79 1.41 1.41 1.79-1.79-1.41-1.41zM12 19.5h-2V22.5h2v-3z');
+            }
         }
-      };
 
-      // 2. 流式发送
-      $('stream').onclick = async () => {
-        const text = $('msg').value.trim();
-        if(!text) return;
+        async function handleSend() {
+            const text = msgInput.value.trim();
+            if (!text) return;
 
-        appendMessage('user', text);
-        $('msg').value = '';
+            // 1. UI 立即反馈
+            appendMessage('user', text);
+            msgInput.value = '';
+            msgInput.style.height = 'auto'; // 重置高度
+            sendBtn.disabled = true;
 
-        const base = $('base').value.trim();
-        const urlText = encodeURIComponent(text);
-        
-        try {
-          const r = await fetch(`${base}/api/chat/stream?text=${urlText}`, { 
-            headers: { 'authorization': `Bearer ${$('key').value.trim()}` } 
-          });
+            // 2. 显示 Loading 气泡
+            const loadingBubble = showLoading();
 
-          if (!r.ok) {
-            appendMessage('ai', 'Error: ' + r.status);
-            return;
-          }
+            // 3. 准备 URL (去除末尾斜杠)
+            let baseUrl = CONFIG.base.replace(/\/+$/, '');
+            if(!baseUrl) {
+                chatContainer.removeChild(loadingBubble);
+                appendMessage('ai', '请先点击顶部设置图标配置 Backend URL');
+                sendBtn.disabled = false;
+                return;
+            }
 
-          const aiMsgDiv = appendMessage('ai', '...');
-          const reader = r.body.getReader();
-          const dec = new TextDecoder();
-          let fullText = '';
+            try {
+                const response = await fetch(baseUrl + '/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${CONFIG.key}`
+                    },
+                    body: JSON.stringify({ text: text })
+                });
 
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            const chunk = dec.decode(value, { stream: true });
-            fullText += chunk;
-            aiMsgDiv.innerText = fullText; // 实时更新内容
+                // 移除 Loading
+                chatContainer.removeChild(loadingBubble);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                appendMessage('ai', data.reply || "无回复内容");
+
+            } catch (e) {
+                // 移除 Loading (如果还在)
+                if(loadingBubble.parentNode) loadingBubble.remove();
+                appendMessage('ai', "发送失败: " + e.message);
+            } finally {
+                sendBtn.disabled = false;
+            }
+        }
+
+        function appendMessage(role, text) {
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            // 简单转义防止 XSS，如果需要支持 Markdown 这里需要换成 markdown 解析库
+            div.textContent = text; 
+            chatContainer.appendChild(div);
+            scrollToBottom();
+            return div;
+        }
+
+        function showLoading() {
+            const div = document.createElement('div');
+            div.className = 'message ai typing-indicator';
+            div.innerHTML = `<div class="dot"></div><div class="dot"></div><div class="dot"></div>`;
+            chatContainer.appendChild(div);
+            scrollToBottom();
+            return div;
+        }
+
+        function scrollToBottom() {
             chatContainer.scrollTop = chatContainer.scrollHeight;
-          }
-        } catch (e) {
-          appendMessage('ai', "流式连接失败: " + e.message);
         }
-      };
     </script>
-  </body>
+</body>
 </html>
